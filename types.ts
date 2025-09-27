@@ -18,6 +18,7 @@ export type RootStackParamList = {
   SignUp: undefined;
   Home: undefined;
   AddCustomer: undefined;
-   EditCustomer: { customerId: string };      // Add this
-  CustomerDetails: { customerId: string };  
+    EditCustomer: { customerId: string };      // Add this
+  CustomerDetails: { customerId: string }; 
+  
 };

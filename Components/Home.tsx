@@ -16,9 +16,9 @@ import {
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList, Customer } from "../types";
-import { db, auth } from "../firebaseConfig";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { signOut } from "firebase/auth";
+import { db, auth, waitForAuth, isUserAuthenticated } from "../firebaseConfig";
+import { collection, query, orderBy, onSnapshot, Unsubscribe } from "firebase/firestore";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 
 type HomeNavProp = NativeStackNavigationProp<RootStackParamList, "Home">;
 type Props = { navigation: HomeNavProp };
@@ -27,55 +27,128 @@ export default function HomeScreen({ navigation }: Props) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [authChecked, setAuthChecked] = useState<boolean>(false);
 
   useEffect(() => {
-    const q = query(collection(db, "customers"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const list = snapshot.docs.map((doc) => {
-          const data = doc.data() as any;
-          return {
-            id: doc.id,
-            name: data.name,
-            phone: data.phone,
-            address: data.address,
-            photoURL: data.photoURL ?? data.photo ?? null,
-            // If notifyDate is a Firestore Timestamp, convert to JS Date
-            notifyDate:
-              data.notifyDate && data.notifyDate.toDate ? data.notifyDate.toDate() : data.notifyDate,
-            createdAt: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : null,
-          } as Customer;
-        });
-        setCustomers(list);
-        setLoading(false);
-        setRefreshing(false);
-      },
-      (error) => {
-        console.error("onSnapshot error:", error);
-        setLoading(false);
-        setRefreshing(false);
-        
-        // Handle permission errors more gracefully
-        if (error.code === 'permission-denied') {
-          Alert.alert(
-            "Permission Error",
-            "You don't have permission to access this data. Please check your Firestore rules.",
-            [
-              { text: "Retry", onPress: () => setLoading(true) },
-              { text: "Logout", onPress: handleLogout }
-            ]
-          );
-        }
-      }
-    );
+    let firestoreUnsubscribe: Unsubscribe | null = null;
 
-    return () => unsubscribe();
-  }, []);
+    // Set up authentication state listener
+    const authUnsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed:", user ? `User: ${user.uid}` : "No user");
+      setAuthChecked(true);
+
+      if (!user) {
+        console.log("No authenticated user, redirecting to login");
+        setLoading(false);
+        navigation.replace("Login");
+        return;
+      }
+
+      console.log("User authenticated, setting up Firestore listener");
+      
+      try {
+        // Set up Firestore listener for customers
+        const q = query(collection(db, "customers"), orderBy("createdAt", "desc"));
+        
+        firestoreUnsubscribe = onSnapshot(
+          q,
+          (snapshot) => {
+            console.log("Firestore data received:", snapshot.docs.length, "documents");
+            
+            const customerList = snapshot.docs.map((doc) => {
+              const data = doc.data();
+              console.log("Customer data:", doc.id, data);
+              
+              return {
+                id: doc.id,
+                name: data.name || "",
+                phone: data.phone || "",
+                address: data.address || "",
+                photoURL: data.photoURL || data.photo || null,
+                notifyDate: data.notifyDate?.toDate ? data.notifyDate.toDate() : data.notifyDate,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+              } as Customer;
+            });
+
+            setCustomers(customerList);
+            setLoading(false);
+            setRefreshing(false);
+          },
+          (error) => {
+            console.error("Firestore onSnapshot error:", error);
+            console.error("Error code:", error.code);
+            console.error("Error message:", error.message);
+            
+            setLoading(false);
+            setRefreshing(false);
+            
+            // Handle specific error cases
+            switch (error.code) {
+              case 'permission-denied':
+                Alert.alert(
+                  "Permission Denied",
+                  "You don't have permission to access the customer data. This might be due to Firestore security rules.",
+                  [
+                    { text: "Retry", onPress: () => setLoading(true) },
+                    { text: "Logout", onPress: handleLogout }
+                  ]
+                );
+                break;
+              
+              case 'unauthenticated':
+                Alert.alert(
+                  "Authentication Required",
+                  "Please log in again to continue.",
+                  [{ text: "OK", onPress: () => navigation.replace("Login") }]
+                );
+                break;
+              
+              case 'unavailable':
+                Alert.alert(
+                  "Service Unavailable",
+                  "Unable to connect to the database. Please check your internet connection and try again.",
+                  [{ text: "Retry", onPress: () => setLoading(true) }]
+                );
+                break;
+              
+              default:
+                Alert.alert(
+                  "Error Loading Data",
+                  `Failed to load customers: ${error.message}`,
+                  [
+                    { text: "Retry", onPress: () => setLoading(true) },
+                    { text: "Logout", onPress: handleLogout }
+                  ]
+                );
+            }
+          }
+        );
+      } catch (error) {
+        console.error("Error setting up Firestore listener:", error);
+        setLoading(false);
+        Alert.alert("Error", "Failed to initialize data connection");
+      }
+    });
+
+    // Cleanup function
+    return () => {
+      console.log("Cleaning up subscriptions");
+      authUnsubscribe();
+      if (firestoreUnsubscribe) {
+        firestoreUnsubscribe();
+      }
+    };
+  }, [navigation]);
 
   const onRefresh = () => {
+    console.log("Refreshing data...");
     setRefreshing(true);
     // The onSnapshot listener will automatically handle the refresh
+    setTimeout(() => {
+      if (refreshing) {
+        setRefreshing(false);
+      }
+    }, 5000); // Timeout after 5 seconds
   };
 
   const handleLogout = async () => {
@@ -89,6 +162,7 @@ export default function HomeScreen({ navigation }: Props) {
           style: "destructive",
           onPress: async () => {
             try {
+              console.log("Logging out user");
               await signOut(auth);
               navigation.replace("Login");
             } catch (error) {
@@ -102,6 +176,11 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const handleCallCustomer = (phone: string) => {
+    if (!phone) {
+      Alert.alert("Error", "No phone number available");
+      return;
+    }
+
     Alert.alert(
       "Call Customer",
       `Call ${phone}?`,
@@ -110,7 +189,8 @@ export default function HomeScreen({ navigation }: Props) {
         {
           text: "Call",
           onPress: () => {
-            Linking.openURL(`tel:${phone}`).catch(() => {
+            Linking.openURL(`tel:${phone}`).catch((error) => {
+              console.error("Failed to make call:", error);
               Alert.alert("Error", "Unable to make phone call");
             });
           }
@@ -120,6 +200,11 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const handleMessageCustomer = (phone: string) => {
+    if (!phone) {
+      Alert.alert("Error", "No phone number available");
+      return;
+    }
+
     Alert.alert(
       "Send Message",
       `Send SMS to ${phone}?`,
@@ -128,7 +213,8 @@ export default function HomeScreen({ navigation }: Props) {
         {
           text: "Message",
           onPress: () => {
-            Linking.openURL(`sms:${phone}`).catch(() => {
+            Linking.openURL(`sms:${phone}`).catch((error) => {
+              console.error("Failed to send message:", error);
               Alert.alert("Error", "Unable to send message");
             });
           }
@@ -141,7 +227,6 @@ export default function HomeScreen({ navigation }: Props) {
     <TouchableOpacity
       style={styles.customerCard}
       onPress={() => {
-        // Navigate to customer details or edit screen when implemented
         Alert.alert("Customer Details", `View details for ${item.name}`);
       }}
       activeOpacity={0.7}
@@ -149,7 +234,11 @@ export default function HomeScreen({ navigation }: Props) {
       <View style={styles.cardHeader}>
         <View style={styles.photoContainer}>
           {item.photoURL ? (
-            <Image source={{ uri: item.photoURL }} style={styles.customerPhoto} />
+            <Image 
+              source={{ uri: item.photoURL }} 
+              style={styles.customerPhoto}
+              onError={(error) => console.log("Image load error:", error)}
+            />
           ) : (
             <View style={styles.placeholderPhoto}>
               <Text style={styles.placeholderText}>
@@ -160,12 +249,12 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
         
         <View style={styles.customerInfo}>
-          <Text style={styles.customerName}>{item.name}</Text>
+          <Text style={styles.customerName}>{item.name || "No Name"}</Text>
           <TouchableOpacity onPress={() => handleCallCustomer(item.phone)}>
-            <Text style={styles.customerPhone}>📞 {item.phone}</Text>
+            <Text style={styles.customerPhone}>📞 {item.phone || "No Phone"}</Text>
           </TouchableOpacity>
           <Text style={styles.customerAddress} numberOfLines={2}>
-            📍 {item.address}
+            📍 {item.address || "No Address"}
           </Text>
           {item.notifyDate && (
             <Text style={styles.notificationDate}>
@@ -193,7 +282,6 @@ export default function HomeScreen({ navigation }: Props) {
         <TouchableOpacity
           style={[styles.actionButton, styles.editButton]}
           onPress={() => {
-            // Navigate to edit customer screen when implemented
             Alert.alert("Edit Customer", `Edit details for ${item.name}`);
           }}
         >
@@ -218,6 +306,19 @@ export default function HomeScreen({ navigation }: Props) {
       </TouchableOpacity>
     </View>
   );
+
+  // Show loading screen while checking auth
+  if (!authChecked) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007bff" />
+          <Text style={styles.loadingText}>Checking authentication...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -247,7 +348,7 @@ export default function HomeScreen({ navigation }: Props) {
       ) : (
         <FlatList
           data={customers}
-          keyExtractor={(item) => item.id ?? Math.random().toString()}
+          keyExtractor={(item) => item.id || Math.random().toString()}
           renderItem={renderCustomerCard}
           contentContainerStyle={styles.listContainer}
           refreshControl={
