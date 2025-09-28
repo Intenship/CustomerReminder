@@ -20,6 +20,7 @@ import { RootStackParamList } from "../types";
 import { db, storage } from "../firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 
 type AddCustomerNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -38,6 +39,8 @@ export default function AddCustomerScreen({ navigation }: Props): JSX.Element {
   const [notifyDate, setNotifyDate] = useState<Date | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
   const [uploadingPhoto, setUploadingPhoto] = useState<boolean>(false);
+const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
@@ -55,51 +58,35 @@ export default function AddCustomerScreen({ navigation }: Props): JSX.Element {
     })();
   }, []);
 
-  const takePhoto = async () => {
-    try {
-      setUploadingPhoto(true);
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        quality: 0.6,
-        aspect: [1, 1],
-      });
+const takePhoto = async () => {
+  const result = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    quality: 0.6,
+    aspect: [1, 1],
+  });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setPhoto(result.assets[0].uri);
-      }
-    } catch (err) {
-      console.error("takePhoto error:", err);
-      Alert.alert("Error", "Could not open camera");
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
+  if (!result.canceled && result.assets?.length) {
+    setPhoto(result.assets[0].uri);
+  }
+};
 
-  const selectFromGallery = async () => {
-    try {
-      setUploadingPhoto(true);
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission Required", "Gallery permission is needed to select photos.");
-        return;
-      }
+const selectFromGallery = async () => {
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== "granted") {
+    Alert.alert("Permission Required", "Gallery permission is needed to select photos.");
+    return;
+  }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        allowsEditing: true,
-        quality: 0.6,
-        aspect: [1, 1],
-      });
+  const result = await ImagePicker.launchImageLibraryAsync({
+    allowsEditing: true,
+    quality: 0.6,
+    aspect: [1, 1],
+  });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setPhoto(result.assets[0].uri);
-      }
-    } catch (err) {
-      console.error("selectFromGallery error:", err);
-      Alert.alert("Error", "Could not access gallery");
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
+  if (!result.canceled && result.assets?.length) {
+    setPhoto(result.assets[0].uri);
+  }
+};
 
   const showPhotoOptions = () => {
     Alert.alert(
@@ -114,31 +101,31 @@ export default function AddCustomerScreen({ navigation }: Props): JSX.Element {
   };
 
   // Upload a local uri to Firebase Storage and return public URL
-  const uploadImageAsync = async (uri: string): Promise<string> => {
-    try {
-      // fetch the file from local uri
-      const response = await fetch(uri);
-      const blob = await response.blob();
+  // Upload local URI to Firebase Storage and get download URL
+const uploadImageAsync = async (uri: string): Promise<string> => {
+  try {
+    // fetch file from local URI
+    const response = await fetch(uri);
+    const blob = await response.blob();
 
-      // unique path with better naming
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).slice(2);
-      const filename = `customers/${timestamp}_${randomString}.jpg`;
-      const storageRef = ref(storage, filename);
+    // unique path in storage
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).slice(2);
+    const filename = `customers/${timestamp}_${randomString}.jpg`; // matches your storage rules
 
-      // upload with metadata
-      await uploadBytes(storageRef, blob, {
-        contentType: 'image/jpeg',
-      });
+    const storageRef = ref(storage, filename);
 
-      // get download URL
-      const url = await getDownloadURL(storageRef);
-      return url;
-    } catch (error) {
-      console.error("Upload error:", error);
-      throw new Error("Failed to upload image. Please try again.");
-    }
-  };
+    // upload file
+    await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
+
+    // get public URL
+    const url = await getDownloadURL(storageRef);
+    return url;
+  } catch (error) {
+    console.error("Upload error:", error);
+    throw new Error("Failed to upload image. Please try again.");
+  }
+};
 
   const scheduleNotification = async (dateParam: Date) => {
     const trigger = { date: dateParam } as Notifications.NotificationTriggerInput;
@@ -304,26 +291,75 @@ export default function AddCustomerScreen({ navigation }: Props): JSX.Element {
             </View>
           </View>
 
-          {/* Notification Section */}
           <View style={styles.notificationSection}>
             <Text style={styles.sectionTitle}>Reminder Settings</Text>
+
             <TouchableOpacity
-              style={styles.notificationButton}
-              onPress={() => {
-                const now = new Date();
-                const later = new Date(now.getTime() + 60 * 1000); // 1 minute later for demo
-                setNotifyDate(later);
-                Alert.alert("Reminder Set", "You'll receive a notification in 1 minute (demo)");
-              }}
-            >
-              <Text style={styles.notificationIcon}>🔔</Text>
-              <View style={styles.notificationTextContainer}>
-                <Text style={styles.notificationTitle}>Set Reminder</Text>
-                <Text style={styles.notificationSubtitle}>
-                  {notifyDate ? `Reminder set for ${notifyDate.toLocaleString()}` : "Tap to set a follow-up reminder"}
-                </Text>
-              </View>
-            </TouchableOpacity>
+  style={styles.notificationButton}
+  onPress={() => setShowDatePicker(true)}
+>
+  <Text style={styles.notificationIcon}>📅</Text>
+  <View style={styles.notificationTextContainer}>
+    <Text style={styles.notificationTitle}>Pick Date</Text>
+    <Text style={styles.notificationSubtitle}>
+      {notifyDate
+        ? notifyDate.toLocaleDateString()
+        : "Tap to choose a date"}
+    </Text>
+  </View>
+</TouchableOpacity>
+
+<TouchableOpacity
+  style={styles.notificationButton}
+  onPress={() => setShowTimePicker(true)}
+>
+  <Text style={styles.notificationIcon}>⏰</Text>
+  <View style={styles.notificationTextContainer}>
+    <Text style={styles.notificationTitle}>Pick Time</Text>
+    <Text style={styles.notificationSubtitle}>
+      {notifyDate
+        ? notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "Tap to choose a time"}
+    </Text>
+  </View>
+</TouchableOpacity>
+
+{showDatePicker && (
+  <DateTimePicker
+    value={notifyDate || new Date()}
+    mode="date"
+    display={Platform.OS === "ios" ? "inline" : "default"}
+    minimumDate={new Date()}
+    onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
+      setShowDatePicker(false);
+      if (event.type === "set" && selectedDate) {
+        // preserve old time if set
+        const newDate = new Date(selectedDate);
+        if (notifyDate) {
+          newDate.setHours(notifyDate.getHours(), notifyDate.getMinutes());
+        }
+        setNotifyDate(newDate);
+      }
+    }}
+  />
+)}
+
+{showTimePicker && (
+  <DateTimePicker
+    value={notifyDate || new Date()}
+    mode="time"
+    display="default"
+    onChange={(event: DateTimePickerEvent, selectedTime?: Date) => {
+      setShowTimePicker(false);
+      if (event.type === "set" && selectedTime) {
+        // preserve old date if set
+        const newDate = notifyDate ? new Date(notifyDate) : new Date();
+        newDate.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+        setNotifyDate(newDate);
+      }
+    }}
+  />
+)}
           </View>
 
           {/* Action Buttons */}
