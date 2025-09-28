@@ -1,6 +1,6 @@
 // types.ts
 export interface Customer {
-  id?: string;
+  id: string;
   name: string;
   phone: string;
   address: string;
@@ -17,8 +17,9 @@ export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Home: undefined;
-  AddCustomer: undefined;
-    EditCustomer: { customerId: string };      // Add this
+  AddCustomer: { customerToEdit?: Customer } | undefined;
+  // AddCustomer: { customerToEdit?: Customer };
+  EditCustomer: { customerId: string };      // Add this
   CustomerDetails: { customerId: string }; 
-  
+
 };
