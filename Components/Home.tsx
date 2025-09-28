@@ -1,4 +1,4 @@
-// // screens/HomeScreen.tsx
+
 // import React, { useEffect, useState } from "react";
 // import {
 //   View,
@@ -13,11 +13,12 @@
 //   Linking,
 //   StatusBar,
 //   Platform,
+//   TextInput,
 // } from "react-native";
 // import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 // import { RootStackParamList, Customer } from "../types";
 // import { db, auth, waitForAuth, isUserAuthenticated } from "../firebaseConfig";
-// import { collection, query, orderBy, onSnapshot, Unsubscribe } from "firebase/firestore";
+// import { collection, query, orderBy, onSnapshot, Unsubscribe, doc, deleteDoc } from "firebase/firestore";
 // import { signOut, onAuthStateChanged } from "firebase/auth";
 
 // type HomeNavProp = NativeStackNavigationProp<RootStackParamList, "Home">;
@@ -25,9 +26,12 @@
 
 // export default function HomeScreen({ navigation }: Props) {
 //   const [customers, setCustomers] = useState<Customer[]>([]);
+//   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+//   const [searchQuery, setSearchQuery] = useState<string>("");
 //   const [loading, setLoading] = useState<boolean>(true);
 //   const [refreshing, setRefreshing] = useState<boolean>(false);
 //   const [authChecked, setAuthChecked] = useState<boolean>(false);
+//   const [deletingId, setDeletingId] = useState<string | null>(null);
 
 //   useEffect(() => {
 //     let firestoreUnsubscribe: Unsubscribe | null = null;
@@ -66,11 +70,14 @@
 //                 address: data.address || "",
 //                 photoURL: data.photoURL || data.photo || null,
 //                 notifyDate: data.notifyDate?.toDate ? data.notifyDate.toDate() : data.notifyDate,
+//                 notificationMethod: data.notificationMethod || 'sms',
+//                 customMessage: data.customMessage || '',
 //                 createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
 //               } as Customer;
 //             });
 
 //             setCustomers(customerList);
+//             setFilteredCustomers(customerList);
 //             setLoading(false);
 //             setRefreshing(false);
 //           },
@@ -140,6 +147,20 @@
 //     };
 //   }, [navigation]);
 
+//   // Search functionality
+//   useEffect(() => {
+//     if (searchQuery.trim() === "") {
+//       setFilteredCustomers(customers);
+//     } else {
+//       const filtered = customers.filter((customer) =>
+//         customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+//         customer.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+//         customer.address.toLowerCase().includes(searchQuery.toLowerCase())
+//       );
+//       setFilteredCustomers(filtered);
+//     }
+//   }, [searchQuery, customers]);
+
 //   const onRefresh = () => {
 //     console.log("Refreshing data...");
 //     setRefreshing(true);
@@ -173,6 +194,36 @@
 //         }
 //       ]
 //     );
+//   };
+
+//   const handleDeleteCustomer = async (customerId: string, customerName: string) => {
+//     Alert.alert(
+//       "Delete Customer",
+//       `Are you sure you want to delete ${customerName}? This action cannot be undone.`,
+//       [
+//         { text: "Cancel", style: "cancel" },
+//         {
+//           text: "Delete",
+//           style: "destructive",
+//           onPress: async () => {
+//             try {
+//               setDeletingId(customerId);
+//               await deleteDoc(doc(db, "customers", customerId));
+//               Alert.alert("Success", `${customerName} has been deleted successfully.`);
+//             } catch (error) {
+//               console.error("Delete error:", error);
+//               Alert.alert("Error", "Failed to delete customer. Please try again.");
+//             } finally {
+//               setDeletingId(null);
+//             }
+//           }
+//         }
+//       ]
+//     );  
+//   };
+
+//   const handleEditCustomer = (customer: Customer) => {
+//     navigation.navigate("AddCustomer", { customerToEdit: customer });
 //   };
 
 //   const handleCallCustomer = (phone: string) => {
@@ -231,7 +282,7 @@
 //       }}
 //       activeOpacity={0.7}
 //     >
-//       <View style={styles.cardHeader}>
+//       <View style={styles.cardContent}>
 //         <View style={styles.photoContainer}>
 //           {item.photoURL ? (
 //             <Image 
@@ -249,44 +300,69 @@
 //         </View>
         
 //         <View style={styles.customerInfo}>
-//           <Text style={styles.customerName}>{item.name || "No Name"}</Text>
-//           <TouchableOpacity onPress={() => handleCallCustomer(item.phone)}>
-//             <Text style={styles.customerPhone}>📞 {item.phone || "No Phone"}</Text>
+//           <View style={styles.nameRow}>
+//             <Text style={styles.customerName} numberOfLines={1}>{item.name || "No Name"}</Text>
+//             {item.notifyDate && (
+//               <View style={styles.reminderBadge}>
+//                 <Text style={styles.reminderText}>!</Text>
+//               </View>
+//             )}
+//           </View>
+          
+//           <TouchableOpacity onPress={() => handleCallCustomer(item.phone)} style={styles.infoRow}>
+//             <Text style={styles.infoIcon}>📞</Text>
+//             <Text style={styles.customerPhone} numberOfLines={1}>{item.phone || "No Phone"}</Text>
 //           </TouchableOpacity>
-//           <Text style={styles.customerAddress} numberOfLines={2}>
-//             📍 {item.address || "No Address"}
-//           </Text>
+          
+//           <View style={styles.infoRow}>
+//             <Text style={styles.infoIcon}>📍</Text>
+//             <Text style={styles.customerAddress} numberOfLines={1}>{item.address || "No Address"}</Text>
+//           </View>
+          
 //           {item.notifyDate && (
-//             <Text style={styles.notificationDate}>
-//               🔔 Reminder: {new Date(item.notifyDate).toLocaleDateString()}
-//             </Text>
+//             <View style={styles.infoRow}>
+//               <Text style={styles.infoIcon}>🔔</Text>
+//               <Text style={styles.notificationDate} numberOfLines={1}>
+//                 {new Date(item.notifyDate).toLocaleDateString()}
+//               </Text>
+//             </View>
 //           )}
 //         </View>
-//       </View>
 
-//       <View style={styles.cardActions}>
-//         <TouchableOpacity
-//           style={styles.actionButton}
-//           onPress={() => handleCallCustomer(item.phone)}
-//         >
-//           <Text style={styles.actionButtonText}>📞 Call</Text>
-//         </TouchableOpacity>
-        
-//         <TouchableOpacity
-//           style={styles.actionButton}
-//           onPress={() => handleMessageCustomer(item.phone)}
-//         >
-//           <Text style={styles.actionButtonText}>💬 Message</Text>
-//         </TouchableOpacity>
-        
-//         <TouchableOpacity
-//           style={[styles.actionButton, styles.editButton]}
-//           onPress={() => {
-//             Alert.alert("Edit Customer", `Edit details for ${item.name}`);
-//           }}
-//         >
-//           <Text style={styles.editButtonText}>✏️ Edit</Text>
-//         </TouchableOpacity>
+//         <View style={styles.actionButtons}>
+//           <TouchableOpacity
+//             style={styles.actionButton}
+//             onPress={() => handleCallCustomer(item.phone)}
+//           >
+//             <Text style={styles.actionIcon}>📞</Text>
+//           </TouchableOpacity>
+          
+//           <TouchableOpacity
+//             style={styles.actionButton}
+//             onPress={() => handleMessageCustomer(item.phone)}
+//           >
+//             <Text style={styles.actionIcon}>💬</Text>
+//           </TouchableOpacity>
+          
+//           <TouchableOpacity
+//             style={[styles.actionButton, styles.editButton]}
+//             onPress={() => handleEditCustomer(item)}
+//           >
+//             <Text style={styles.actionIcon}>✏️</Text>
+//           </TouchableOpacity>
+
+//           <TouchableOpacity
+//             style={[styles.actionButton, styles.deleteButton]}
+//             onPress={() => handleDeleteCustomer(item.id, item.name)}
+//             disabled={deletingId === item.id}
+//           >
+//             {deletingId === item.id ? (
+//               <ActivityIndicator size="small" color="#dc3545" />
+//             ) : (
+//               <Text style={styles.actionIcon}>🗑️</Text>
+//             )}
+//           </TouchableOpacity>
+//         </View>
 //       </View>
 //     </TouchableOpacity>
 //   );
@@ -294,16 +370,23 @@
 //   const renderEmptyState = () => (
 //     <View style={styles.emptyState}>
 //       <Text style={styles.emptyStateIcon}>👥</Text>
-//       <Text style={styles.emptyStateTitle}>No Customers Yet</Text>
-//       <Text style={styles.emptyStateDescription}>
-//         Start by adding your first customer to build your customer base
+//       <Text style={styles.emptyStateTitle}>
+//         {searchQuery ? "No customers found" : "No Customers Yet"}
 //       </Text>
-//       <TouchableOpacity
-//         style={styles.addFirstCustomerButton}
-//         onPress={() => navigation.navigate("AddCustomer")}
-//       >
-//         <Text style={styles.addFirstCustomerButtonText}>Add First Customer</Text>
-//       </TouchableOpacity>
+//       <Text style={styles.emptyStateDescription}>
+//         {searchQuery 
+//           ? `No customers match "${searchQuery}"`
+//           : "Start by adding your first customer to build your customer base"
+//         }
+//       </Text>
+//       {!searchQuery && (
+//         <TouchableOpacity
+//           style={styles.addFirstCustomerButton}
+//           onPress={() => navigation.navigate("AddCustomer")}
+//         >
+//           <Text style={styles.addFirstCustomerButtonText}>Add First Customer</Text>
+//         </TouchableOpacity>
+//       )}
 //     </View>
 //   );
 
@@ -324,17 +407,46 @@
 //     <View style={styles.container}>
 //       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       
-//       {/* Header */}
+//       {/* Compact Header */}
 //       <View style={styles.header}>
-//         <View style={styles.headerLeft}>
-//           <Text style={styles.headerTitle}>Customer Manager</Text>
-//           <Text style={styles.headerSubtitle}>
-//             {customers.length} customer{customers.length !== 1 ? 's' : ''}
-//           </Text>
+//         <View style={styles.headerContent}>
+//           <View style={styles.titleContainer}>
+//             <Text style={styles.headerIcon}>👥</Text>
+//             <View>
+//               <Text style={styles.headerTitle}>Customers</Text>
+//               <Text style={styles.headerSubtitle}>
+//                 {filteredCustomers.length} total{searchQuery ? ' (filtered)' : ''}
+//               </Text>
+//             </View>
+//           </View>
+//           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+//             <Text style={styles.logoutIcon}>↗️</Text>
+//           </TouchableOpacity>
 //         </View>
-//         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-//           <Text style={styles.logoutButtonText}>Logout</Text>
-//         </TouchableOpacity>
+//       </View>
+
+//       {/* Compact Search Box */}
+//       <View style={styles.searchContainer}>
+//         <View style={styles.searchInputContainer}>
+//           <Text style={styles.searchIcon}>🔍</Text>
+//           <TextInput
+//             style={styles.searchInput}
+//             placeholder="Search customers..."
+//             placeholderTextColor="#999"
+//             value={searchQuery}
+//             onChangeText={setSearchQuery}
+//             autoCapitalize="none"
+//             autoCorrect={false}
+//           />
+//           {searchQuery.length > 0 && (
+//             <TouchableOpacity
+//               style={styles.clearSearchButton}
+//               onPress={() => setSearchQuery("")}
+//             >
+//               <Text style={styles.clearSearchText}>✕</Text>
+//             </TouchableOpacity>
+//           )}
+//         </View>
 //       </View>
 
 //       {/* Content */}
@@ -343,11 +455,11 @@
 //           <ActivityIndicator size="large" color="#007bff" />
 //           <Text style={styles.loadingText}>Loading customers...</Text>
 //         </View>
-//       ) : customers.length === 0 ? (
+//       ) : filteredCustomers.length === 0 ? (
 //         renderEmptyState()
 //       ) : (
 //         <FlatList
-//           data={customers}
+//           data={filteredCustomers}
 //           keyExtractor={(item) => item.id || Math.random().toString()}
 //           renderItem={renderCustomerCard}
 //           contentContainerStyle={styles.listContainer}
@@ -360,6 +472,13 @@
 //             />
 //           }
 //           showsVerticalScrollIndicator={false}
+//           removeClippedSubviews={true}
+//           maxToRenderPerBatch={20}
+//           windowSize={10}
+//           initialNumToRender={15}
+//           getItemLayout={(data, index) => (
+//             { length: 85, offset: 85 * index, index }
+//           )}
 //         />
 //       )}
 
@@ -383,54 +502,99 @@
 //     backgroundColor: "#f8f9fa",
 //   },
 //   header: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//     padding: 20,
-//     paddingTop: Platform.OS === 'ios' ? 50 : 20,
 //     backgroundColor: "#fff",
+//     paddingTop: Platform.OS === 'ios' ? 45 : 15,
+//     paddingBottom: 12,
+//     paddingHorizontal: 16,
 //     borderBottomWidth: 1,
 //     borderBottomColor: "#e1e5e9",
 //     shadowColor: "#000",
-//     shadowOffset: {
-//       width: 0,
-//       height: 2,
-//     },
+//     shadowOffset: { width: 0, height: 2 },
 //     shadowOpacity: 0.05,
 //     shadowRadius: 4,
 //     elevation: 2,
 //   },
-//   headerLeft: {
-//     flex: 1,
+//   headerContent: {
+//     flexDirection: "row",
+//     justifyContent: "space-between",
+//     alignItems: "center",
+//   },
+//   titleContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//   },
+//   headerIcon: {
+//     fontSize: 24,
+//     marginRight: 8,
 //   },
 //   headerTitle: {
-//     fontSize: 24,
+//     fontSize: 20,
 //     fontWeight: "bold",
 //     color: "#1a1a1a",
 //   },
 //   headerSubtitle: {
-//     fontSize: 14,
+//     fontSize: 12,
 //     color: "#666",
-//     marginTop: 2,
+//     marginTop: 1,
 //   },
 //   logoutButton: {
+//     width: 36,
+//     height: 36,
+//     borderRadius: 18,
 //     backgroundColor: "#dc3545",
-//     paddingHorizontal: 16,
-//     paddingVertical: 8,
-//     borderRadius: 8,
+//     justifyContent: "center",
+//     alignItems: "center",
 //     shadowColor: "#dc3545",
-//     shadowOffset: {
-//       width: 0,
-//       height: 2,
-//     },
+//     shadowOffset: { width: 0, height: 2 },
 //     shadowOpacity: 0.2,
 //     shadowRadius: 4,
 //     elevation: 3,
 //   },
-//   logoutButtonText: {
+//   logoutIcon: {
+//     fontSize: 16,
 //     color: "#fff",
+//   },
+//   searchContainer: {
+//     paddingHorizontal: 16,
+//     paddingVertical: 8,
+//   },
+//   searchInputContainer: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     backgroundColor: "#fff",
+//     borderRadius: 20,
+//     paddingHorizontal: 12,
+//     borderWidth: 1,
+//     borderColor: "#e1e5e9",
+//     shadowColor: "#000",
+//     shadowOffset: { width: 0, height: 1 },
+//     shadowOpacity: 0.05,
+//     shadowRadius: 2,
+//     elevation: 1,
+//   },
+//   searchIcon: {
+//     fontSize: 16,
+//     marginRight: 8,
+//     color: "#666",
+//   },
+//   searchInput: {
+//     flex: 1,
+//     paddingVertical: 8,
 //     fontSize: 14,
-//     fontWeight: "600",
+//     color: "#333",
+//   },
+//   clearSearchButton: {
+//     width: 20,
+//     height: 20,
+//     borderRadius: 10,
+//     backgroundColor: "#666",
+//     justifyContent: "center",
+//     alignItems: "center",
+//   },
+//   clearSearchText: {
+//     color: "#fff",
+//     fontSize: 10,
+//     fontWeight: "bold",
 //   },
 //   loadingContainer: {
 //     flex: 1,
@@ -445,117 +609,128 @@
 //     fontWeight: "500",
 //   },
 //   listContainer: {
-//     padding: 16,
-//     paddingBottom: 100,
+//     padding: 12,
+//     paddingBottom: 80,
 //   },
 //   customerCard: {
 //     backgroundColor: "#fff",
-//     borderRadius: 12,
-//     padding: 16,
-//     marginBottom: 16,
+//     borderRadius: 8,
+//     marginBottom: 8,
 //     shadowColor: "#000",
-//     shadowOffset: {
-//       width: 0,
-//       height: 4,
-//     },
+//     shadowOffset: { width: 0, height: 1 },
 //     shadowOpacity: 0.1,
-//     shadowRadius: 8,
-//     elevation: 4,
+//     shadowRadius: 2,
+//     elevation: 2,
 //     borderWidth: 1,
 //     borderColor: "#f0f0f0",
 //   },
-//   cardHeader: {
+//   cardContent: {
 //     flexDirection: "row",
-//     marginBottom: 16,
+//     alignItems: "center",
+//     padding: 12,
 //   },
 //   photoContainer: {
-//     marginRight: 16,
+//     marginRight: 12,
 //   },
 //   customerPhoto: {
-//     width: 64,
-//     height: 64,
-//     borderRadius: 32,
+//     width: 40,
+//     height: 40,
+//     borderRadius: 20,
 //     backgroundColor: "#f0f0f0",
-//     borderWidth: 2,
-//     borderColor: "#e1e5e9",
 //   },
 //   placeholderPhoto: {
-//     width: 64,
-//     height: 64,
-//     borderRadius: 32,
+//     width: 40,
+//     height: 40,
+//     borderRadius: 20,
 //     backgroundColor: "#007bff",
 //     justifyContent: "center",
 //     alignItems: "center",
-//     borderWidth: 2,
-//     borderColor: "#0056b3",
 //   },
 //   placeholderText: {
 //     color: "#fff",
-//     fontSize: 24,
+//     fontSize: 16,
 //     fontWeight: "bold",
 //   },
 //   customerInfo: {
 //     flex: 1,
-//     justifyContent: "center",
+//     marginRight: 8,
+//   },
+//   nameRow: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     marginBottom: 4,
 //   },
 //   customerName: {
-//     fontSize: 18,
+//     fontSize: 16,
 //     fontWeight: "bold",
 //     color: "#1a1a1a",
-//     marginBottom: 6,
+//     flex: 1,
+//   },
+//   reminderBadge: {
+//     width: 16,
+//     height: 16,
+//     borderRadius: 8,
+//     backgroundColor: "#28a745",
+//     justifyContent: "center",
+//     alignItems: "center",
+//     marginLeft: 6,
+//   },
+//   reminderText: {
+//     color: "#fff",
+//     fontSize: 10,
+//     fontWeight: "bold",
+//   },
+//   infoRow: {
+//     flexDirection: "row",
+//     alignItems: "center",
+//     marginBottom: 2,
+//   },
+//   infoIcon: {
+//     fontSize: 10,
+//     width: 14,
+//     marginRight: 6,
 //   },
 //   customerPhone: {
-//     fontSize: 14,
+//     fontSize: 12,
 //     color: "#007bff",
-//     marginBottom: 4,
 //     fontWeight: "500",
+//     flex: 1,
 //   },
 //   customerAddress: {
-//     fontSize: 14,
+//     fontSize: 12,
 //     color: "#666",
-//     lineHeight: 18,
-//     marginBottom: 4,
+//     flex: 1,
 //   },
 //   notificationDate: {
 //     fontSize: 12,
 //     color: "#28a745",
 //     fontWeight: "500",
-//     backgroundColor: "#e8f5e8",
-//     paddingHorizontal: 8,
-//     paddingVertical: 2,
-//     borderRadius: 4,
-//     alignSelf: "flex-start",
+//     flex: 1,
 //   },
-//   cardActions: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     borderTopWidth: 1,
-//     borderTopColor: "#f0f0f0",
-//     paddingTop: 12,
-//     gap: 8,
+//   actionButtons: {
+//     flexDirection: "column",
+//     gap: 4,
 //   },
 //   actionButton: {
-//     flex: 1,
-//     alignItems: "center",
-//     paddingVertical: 10,
+//     width: 32,
+//     height: 32,
+//     borderRadius: 6,
 //     backgroundColor: "#f8f9fa",
-//     borderRadius: 8,
+//     justifyContent: "center",
+//     alignItems: "center",
 //     borderWidth: 1,
 //     borderColor: "#e1e5e9",
 //   },
-//   actionButtonText: {
-//     fontSize: 13,
-//     color: "#333",
-//     fontWeight: "500",
+//   actionIcon: {
+//     fontSize: 12,
 //   },
 //   editButton: {
 //     backgroundColor: "#e3f2fd",
 //     borderColor: "#bbdefb",
 //   },
-//   editButtonText: {
-//     fontSize: 13,
-//     color: "#1976d2",
-//     fontWeight: "500",
+//   deleteButton: {
+//     backgroundColor: "#ffebee",
+//     borderColor: "#ffcdd2",
 //   },
 //   emptyState: {
 //     flex: 1,
@@ -565,73 +740,65 @@
 //     backgroundColor: "#f8f9fa",
 //   },
 //   emptyStateIcon: {
-//     fontSize: 80,
-//     marginBottom: 20,
+//     fontSize: 60,
+//     marginBottom: 16,
 //     opacity: 0.6,
 //   },
 //   emptyStateTitle: {
-//     fontSize: 24,
+//     fontSize: 20,
 //     fontWeight: "bold",
 //     color: "#1a1a1a",
-//     marginBottom: 12,
+//     marginBottom: 8,
 //     textAlign: "center",
 //   },
 //   emptyStateDescription: {
-//     fontSize: 16,
+//     fontSize: 14,
 //     color: "#666",
 //     textAlign: "center",
-//     lineHeight: 24,
-//     marginBottom: 32,
+//     lineHeight: 20,
+//     marginBottom: 24,
 //     paddingHorizontal: 20,
 //   },
 //   addFirstCustomerButton: {
 //     backgroundColor: "#007bff",
-//     paddingHorizontal: 32,
-//     paddingVertical: 16,
-//     borderRadius: 12,
+//     paddingHorizontal: 24,
+//     paddingVertical: 12,
+//     borderRadius: 8,
 //     shadowColor: "#007bff",
-//     shadowOffset: {
-//       width: 0,
-//       height: 4,
-//     },
-//     shadowOpacity: 0.3,
-//     shadowRadius: 8,
-//     elevation: 6,
+//     shadowOffset: { width: 0, height: 2 },
+//     shadowOpacity: 0.2,
+//     shadowRadius: 4,
+//     elevation: 4,
 //   },
 //   addFirstCustomerButtonText: {
 //     color: "#fff",
-//     fontSize: 16,
+//     fontSize: 14,
 //     fontWeight: "bold",
 //     textAlign: "center",
 //   },
 //   floatingAddButton: {
 //     position: "absolute",
-//     bottom: 24,
-//     right: 24,
-//     width: 56,
-//     height: 56,
-//     borderRadius: 28,
+//     bottom: 20,
+//     right: 20,
+//     width: 48,
+//     height: 48,
+//     borderRadius: 24,
 //     backgroundColor: "#007bff",
 //     justifyContent: "center",
 //     alignItems: "center",
 //     shadowColor: "#007bff",
-//     shadowOffset: {
-//       width: 0,
-//       height: 6,
-//     },
-//     shadowOpacity: 0.4,
-//     shadowRadius: 12,
-//     elevation: 8,
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.3,
+//     shadowRadius: 8,
+//     elevation: 6,
 //   },
 //   floatingAddButtonText: {
 //     color: "#fff",
-//     fontSize: 24,
+//     fontSize: 20,
 //     fontWeight: "bold",
-//     lineHeight: 24,
+//     lineHeight: 20,
 //   },
 // });
-
-// screens/HomeScreen.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -911,11 +1078,11 @@ export default function HomeScreen({ navigation }: Props) {
     <TouchableOpacity
       style={styles.customerCard}
       onPress={() => {
-        Alert.alert("Customer Details", `View details for ${item.name}`);
+        navigation.navigate("ViewCustomer", { customer: item });
       }}
       activeOpacity={0.7}
     >
-      <View style={styles.cardHeader}>
+      <View style={styles.cardContent}>
         <View style={styles.photoContainer}>
           {item.photoURL ? (
             <Image 
@@ -933,54 +1100,71 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
         
         <View style={styles.customerInfo}>
-          <Text style={styles.customerName}>{item.name || "No Name"}</Text>
-          <TouchableOpacity onPress={() => handleCallCustomer(item.phone)}>
-            <Text style={styles.customerPhone}>📞 {item.phone || "No Phone"}</Text>
-          </TouchableOpacity>
-          <Text style={styles.customerAddress} numberOfLines={2}>
-            📍 {item.address || "No Address"}
-          </Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.customerName} numberOfLines={1}>{item.name || "No Name"}</Text>
+            {item.notifyDate && (
+              <View style={styles.reminderBadge}>
+                <Text style={styles.reminderText}>!</Text>
+              </View>
+            )}
+          </View>
+          
+          <View style={styles.detailsRow}>
+            <TouchableOpacity onPress={() => handleCallCustomer(item.phone)} style={styles.phoneContainer}>
+              <Text style={styles.infoIcon}>📞</Text>
+              <Text style={styles.customerPhone} numberOfLines={1}>{item.phone || "No Phone"}</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.addressContainer}>
+              <Text style={styles.infoIcon}>📍</Text>
+              <Text style={styles.customerAddress} numberOfLines={1}>{item.address || "No Address"}</Text>
+            </View>
+          </View>
+          
           {item.notifyDate && (
-            <Text style={styles.notificationDate}>
-              🔔 Reminder: {new Date(item.notifyDate).toLocaleDateString()}
-            </Text>
+            <View style={styles.reminderRow}>
+              <Text style={styles.infoIcon}>🔔</Text>
+              <Text style={styles.notificationDate} numberOfLines={1}>
+                {new Date(item.notifyDate).toLocaleDateString()}
+              </Text>
+            </View>
           )}
         </View>
-      </View>
 
-      <View style={styles.cardActions}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => handleCallCustomer(item.phone)}
-        >
-          <Text style={styles.actionButtonText}>📞 Call</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => handleMessageCustomer(item.phone)}
-        >
-          <Text style={styles.actionButtonText}>💬 Message</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.actionButton, styles.editButton]}
-          onPress={() => handleEditCustomer(item)}
-        >
-          <Text style={styles.editButtonText}>✏️ Edit</Text>
-        </TouchableOpacity>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleCallCustomer(item.phone)}
+          >
+            <Text style={styles.actionIcon}>📞</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => handleMessageCustomer(item.phone)}
+          >
+            <Text style={styles.actionIcon}>💬</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => handleEditCustomer(item)}
+          >
+            <Text style={styles.actionIcon}>✏️</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.actionButton, styles.deleteButton]}
-          onPress={() => handleDeleteCustomer(item.id, item.name)}
-          disabled={deletingId === item.id}
-        >
-          {deletingId === item.id ? (
-            <ActivityIndicator size="small" color="#dc3545" />
-          ) : (
-            <Text style={styles.deleteButtonText}>🗑️ Delete</Text>
-          )}
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={() => handleDeleteCustomer(item.id, item.name)}
+            disabled={deletingId === item.id}
+          >
+            {deletingId === item.id ? (
+              <ActivityIndicator size="small" color="#dc3545" />
+            ) : (
+              <Text style={styles.actionIcon}>🗑️</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -1025,39 +1209,46 @@ export default function HomeScreen({ navigation }: Props) {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       
-      {/* Header */}
+      {/* Compact Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Customer Manager</Text>
-          <Text style={styles.headerSubtitle}>
-            {filteredCustomers.length} customer{filteredCustomers.length !== 1 ? 's' : ''}
-            {searchQuery ? ` (filtered)` : ''}
-          </Text>
+        <View style={styles.headerContent}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.headerIcon}>👥</Text>
+            <View>
+              <Text style={styles.headerTitle}>Customers</Text>
+              <Text style={styles.headerSubtitle}>
+                {filteredCustomers.length} total{searchQuery ? ' (filtered)' : ''}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutIcon}>↗️</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Search Box */}
+      {/* Compact Search Box */}
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search customers by name, phone, or address..."
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity
-            style={styles.clearSearchButton}
-            onPress={() => setSearchQuery("")}
-          >
-            <Text style={styles.clearSearchText}>✕</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.searchInputContainer}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search customers..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearSearchButton}
+              onPress={() => setSearchQuery("")}
+            >
+              <Text style={styles.clearSearchText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Content */}
@@ -1083,6 +1274,13 @@ export default function HomeScreen({ navigation }: Props) {
             />
           }
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={20}
+          windowSize={10}
+          initialNumToRender={15}
+          getItemLayout={(data, index) => (
+            { length: 68, offset: 68 * index, index }
+          )}
         />
       )}
 
@@ -1106,93 +1304,98 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
     backgroundColor: "#fff",
+    paddingTop: Platform.OS === 'ios' ? 45 : 15,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#e1e5e9",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  headerLeft: {
-    flex: 1,
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  titleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerIcon: {
+    fontSize: 24,
+    marginRight: 8,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#1a1a1a",
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#666",
-    marginTop: 2,
+    marginTop: 1,
   },
   logoutButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#dc3545",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
     shadowColor: "#dc3545",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
-  logoutButtonText: {
+  logoutIcon: {
+    fontSize: 16,
     color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
   },
   searchContainer: {
-    position: "relative",
-    margin: 16,
-    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  searchInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: "#e1e5e9",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+    color: "#666",
   },
   searchInput: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1.5,
-    borderColor: "#e1e5e9",
-    paddingRight: 40,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    flex: 1,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: "#333",
   },
   clearSearchButton: {
-    position: "absolute",
-    right: 12,
-    top: "50%",
-    transform: [{ translateY: -12 }],
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: "#666",
     justifyContent: "center",
     alignItems: "center",
   },
   clearSearchText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
   },
   loadingContainer: {
@@ -1208,129 +1411,144 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   listContainer: {
-    padding: 16,
-    paddingTop: 8,
-    paddingBottom: 100,
+    padding: 8,
+    paddingBottom: 80,
   },
   customerCard: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 6,
+    marginBottom: 4,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
     borderWidth: 1,
     borderColor: "#f0f0f0",
   },
-  cardHeader: {
+  cardContent: {
     flexDirection: "row",
-    marginBottom: 16,
+    alignItems: "center",
+    padding: 10,
+    minHeight: 60,
   },
   photoContainer: {
-    marginRight: 16,
+    marginRight: 8,
   },
   customerPhoto: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#f0f0f0",
-    borderWidth: 2,
-    borderColor: "#e1e5e9",
   },
   placeholderPhoto: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#007bff",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#0056b3",
   },
   placeholderText: {
     color: "#fff",
-    fontSize: 24,
+    fontSize: 14,
     fontWeight: "bold",
   },
   customerInfo: {
     flex: 1,
-    justifyContent: "center",
+    marginRight: 8,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
   },
   customerName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#1a1a1a",
-    marginBottom: 6,
+    flex: 1,
+  },
+  reminderBadge: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#28a745",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 4,
+  },
+  reminderText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "bold",
+  },
+  detailsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  phoneContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 8,
+  },
+  addressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1.5,
+  },
+  reminderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  infoIcon: {
+    fontSize: 10,
+    width: 12,
+    marginRight: 4,
   },
   customerPhone: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#007bff",
-    marginBottom: 4,
     fontWeight: "500",
+    flex: 1,
   },
   customerAddress: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#666",
-    lineHeight: 18,
-    marginBottom: 4,
+    flex: 1,
   },
   notificationDate: {
     fontSize: 12,
     color: "#28a745",
     fontWeight: "500",
-    backgroundColor: "#e8f5e8",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    alignSelf: "flex-start",
+    flex: 1,
   },
-  cardActions: {
+  actionButtons: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-    paddingTop: 12,
-    gap: 6,
+    gap: 2,
   },
   actionButton: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 4,
     backgroundColor: "#f8f9fa",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e1e5e9",
-    minHeight: 36,
     justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 0.5,
+    borderColor: "#e1e5e9",
   },
-  actionButtonText: {
-    fontSize: 11,
-    color: "#333",
-    fontWeight: "500",
+  actionIcon: {
+    fontSize: 10,
   },
   editButton: {
     backgroundColor: "#e3f2fd",
     borderColor: "#bbdefb",
   },
-  editButtonText: {
-    fontSize: 11,
-    color: "#1976d2",
-    fontWeight: "500",
-  },
   deleteButton: {
     backgroundColor: "#ffebee",
     borderColor: "#ffcdd2",
-  },
-  deleteButtonText: {
-    fontSize: 11,
-    color: "#dc3545",
-    fontWeight: "500",
   },
   emptyState: {
     flex: 1,
@@ -1340,68 +1558,62 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f9fa",
   },
   emptyStateIcon: {
-    fontSize: 80,
-    marginBottom: 20,
+    fontSize: 60,
+    marginBottom: 16,
     opacity: 0.6,
   },
   emptyStateTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#1a1a1a",
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: "center",
   },
   emptyStateDescription: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#666",
     textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 32,
+    lineHeight: 20,
+    marginBottom: 24,
     paddingHorizontal: 20,
   },
   addFirstCustomerButton: {
     backgroundColor: "#007bff",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
     shadowColor: "#007bff",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   addFirstCustomerButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
     textAlign: "center",
   },
   floatingAddButton: {
     position: "absolute",
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    bottom: 20,
+    right: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#007bff",
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#007bff",
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   floatingAddButtonText: {
     color: "#fff",
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
-    lineHeight: 24,
+    lineHeight: 20,
   },
 });

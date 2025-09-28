@@ -588,6 +588,7 @@
 // screens/AddCustomerScreen.tsx
 // screens/AddCustomerScreen.tsx - Expo Go Compatible Version
 
+
 import React, { useState, useEffect, JSX } from "react";
 import {
   View,
@@ -609,7 +610,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { db, storage } from "../firebaseConfig";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { RouteProp } from "@react-navigation/native";
@@ -640,7 +641,10 @@ const storeReminder = async (
     const reminders = await AsyncStorage.getItem('customerReminders');
     const remindersArray = reminders ? JSON.parse(reminders) : [];
     
-    remindersArray.push({
+    // Remove existing reminder for this customer if updating
+    const filteredReminders = remindersArray.filter((reminder: any) => reminder.id !== customerId);
+    
+    filteredReminders.push({
       id: customerId,
       name: customerName,
       phone: phone,
@@ -651,9 +655,23 @@ const storeReminder = async (
       sent: false
     });
     
-    await AsyncStorage.setItem('customerReminders', JSON.stringify(remindersArray));
+    await AsyncStorage.setItem('customerReminders', JSON.stringify(filteredReminders));
   } catch (error) {
     console.error('Failed to store reminder:', error);
+  }
+};
+
+// Function to remove reminder from local storage
+const removeReminder = async (customerId: string) => {
+  try {
+    const reminders = await AsyncStorage.getItem('customerReminders');
+    if (reminders) {
+      const remindersArray = JSON.parse(reminders);
+      const filteredReminders = remindersArray.filter((reminder: any) => reminder.id !== customerId);
+      await AsyncStorage.setItem('customerReminders', JSON.stringify(filteredReminders));
+    }
+  } catch (error) {
+    console.error('Failed to remove reminder:', error);
   }
 };
 
@@ -722,8 +740,10 @@ const sendWhatsAppReminder = async (phone: string, message: string, customerName
   }
 };
 
-export default function AddCustomerScreen({ navigation,route }: Props) {
+export default function AddCustomerScreen({ navigation, route }: Props) {
   const { customerToEdit } = route.params || {};
+  const isEditing = !!customerToEdit;
+  
   const [name, setName] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [address, setAddress] = useState<string>("");
@@ -736,12 +756,14 @@ export default function AddCustomerScreen({ navigation,route }: Props) {
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
 
-   useEffect(() => {
+  useEffect(() => {
     if (customerToEdit) {
-      setName(customerToEdit.name);
-      setPhone(customerToEdit.phone);
-      setAddress(customerToEdit.address);
+      setName(customerToEdit.name || "");
+      setPhone(customerToEdit.phone || "");
+      setAddress(customerToEdit.address || "");
       setPhoto(customerToEdit.photoURL || customerToEdit.photo);
+      // setNotificationMethod(customerToEdit.notificationMethod || 'sms');
+      setCustomMessage(customerToEdit.customMessage || "");
       if (customerToEdit.notifyDate) {
         setNotifyDate(new Date(customerToEdit.notifyDate));
       }
@@ -758,12 +780,12 @@ export default function AddCustomerScreen({ navigation,route }: Props) {
     })();
   }, []);
 
-  // Set default message when name changes
+  // Set default message when name changes (only for new customers)
   useEffect(() => {
-    if (name.trim() && !customMessage.trim()) {
+    if (name.trim() && !customMessage.trim() && !isEditing) {
       setCustomMessage(`Hi ${name.trim()}, this is a friendly reminder from our business. Hope you're doing well!`);
     }
-  }, [name]);
+  }, [name, isEditing]);
 
   const takePhoto = async () => {
     const result = await ImagePicker.launchCameraAsync({
@@ -803,6 +825,7 @@ export default function AddCustomerScreen({ navigation,route }: Props) {
         { text: "Cancel", style: "cancel" },
         { text: "Take Photo", onPress: takePhoto },
         { text: "Choose from Gallery", onPress: selectFromGallery },
+        ...(photo ? [{ text: "Remove Photo", onPress: () => setPhoto(undefined), style: "destructive" as const }] : [])
       ]
     );
   };
@@ -902,12 +925,19 @@ export default function AddCustomerScreen({ navigation,route }: Props) {
     setSaving(true);
     try {
       let photoURL: string | null = null;
+      
+      // Handle photo upload - only upload if it's a new photo (local URI)
       if (photo) {
-        photoURL = await uploadImageAsync(photo);
+        if (photo.startsWith('file://') || photo.startsWith('content://')) {
+          // This is a new photo that needs to be uploaded
+          photoURL = await uploadImageAsync(photo);
+        } else {
+          // This is an existing photo URL from Firestore
+          photoURL = photo;
+        }
       }
 
-      // Save to Firestore
-      const docRef = await addDoc(collection(db, "customers"), {
+      const customerData = {
         name: name.trim(),
         phone: phone.trim(),
         address: address.trim(),
@@ -915,37 +945,55 @@ export default function AddCustomerScreen({ navigation,route }: Props) {
         notifyDate: notifyDate || null,
         notificationMethod: notificationMethod,
         customMessage: customMessage.trim(),
-        createdAt: serverTimestamp(),
-      });
+        ...(isEditing ? { updatedAt: serverTimestamp() } : { createdAt: serverTimestamp() })
+      };
 
-      // Store reminder locally for Expo Go compatibility
+      let customerId: string;
+
+      if (isEditing && customerToEdit?.id) {
+        // Update existing customer
+        const customerRef = doc(db, "customers", customerToEdit.id);
+        await updateDoc(customerRef, customerData);
+        customerId = customerToEdit.id;
+        console.log("Updated customer id:", customerId);
+      } else {
+        // Create new customer
+        const docRef = await addDoc(collection(db, "customers"), customerData);
+        customerId = docRef.id;
+        console.log("Created new customer id:", customerId);
+      }
+
+      // Handle reminders in local storage
       if (notifyDate) {
         await storeReminder(
-          docRef.id, 
+          customerId, 
           name.trim(), 
           phone.trim(),
           notifyDate, 
           notificationMethod,
           customMessage.trim()
         );
+      } else {
+        // Remove reminder if no notify date is set
+        await removeReminder(customerId);
       }
 
-      console.log("Saved customer id:", docRef.id);
-      
-      // Show success message with reminder info
+      // Show success message
       const methodText = notificationMethod === 'both' ? 'SMS & WhatsApp' : 
                         notificationMethod === 'whatsapp' ? 'WhatsApp' : 'SMS';
       
+      const actionText = isEditing ? "updated" : "added";
       const successMessage = notifyDate 
-        ? `Customer added successfully! Reminder set for ${notifyDate.toLocaleDateString()} at ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} via ${methodText}.\n\nNote: Since you're using Expo Go, reminders are stored locally. The app will attempt to send ${methodText} when the reminder time arrives.`
-        : "Customer added successfully!";
+        ? `Customer ${actionText} successfully! Reminder set for ${notifyDate.toLocaleDateString()} at ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} via ${methodText}.\n\nNote: Since you're using Expo Go, reminders are stored locally. The app will attempt to send ${methodText} when the reminder time arrives.`
+        : `Customer ${actionText} successfully!`;
         
       Alert.alert("Success", successMessage, [
         { text: "OK", onPress: () => navigation.goBack() }
       ]);
     } catch (err) {
       console.error("handleSave error:", err);
-      Alert.alert("Error", "Failed to save customer. Please check your internet connection and try again.");
+      const actionText = isEditing ? "update" : "save";
+      Alert.alert("Error", `Failed to ${actionText} customer. Please check your internet connection and try again.`);
     } finally {
       setSaving(false);
     }
@@ -963,8 +1011,12 @@ export default function AddCustomerScreen({ navigation,route }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Add New Customer</Text>
-          <Text style={styles.headerSubtitle}>Fill in the customer details</Text>
+          <Text style={styles.headerTitle}>
+            {isEditing ? "Edit Customer" : "Add New Customer"}
+          </Text>
+          <Text style={styles.headerSubtitle}>
+            {isEditing ? "Update customer details" : "Fill in the customer details"}
+          </Text>
         </View>
 
         <View style={styles.formContainer}>
@@ -1211,7 +1263,9 @@ export default function AddCustomerScreen({ navigation,route }: Props) {
               {saving ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.saveButtonText}>Save Customer</Text>
+                <Text style={styles.saveButtonText}>
+                  {isEditing ? "Update Customer" : "Save Customer"}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
