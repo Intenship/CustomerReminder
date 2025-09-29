@@ -588,8 +588,7 @@
 // screens/AddCustomerScreen.tsx
 // screens/AddCustomerScreen.tsx - Expo Go Compatible Version
 
-
-import React, { useState, useEffect, JSX } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   TextInput,
@@ -606,12 +605,12 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as SMS from "expo-sms";
+import * as FileSystem from "expo-file-system/legacy";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
-import { db, storage } from "../firebaseConfig";
+import { db } from "../firebaseConfig";
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { RouteProp } from "@react-navigation/native";
 
@@ -628,7 +627,6 @@ type Props = {
 
 type NotificationMethod = 'sms' | 'whatsapp' | 'both';
 
-// Enhanced reminder storage with notification preferences
 const storeReminder = async (
   customerId: string, 
   customerName: string, 
@@ -641,7 +639,6 @@ const storeReminder = async (
     const reminders = await AsyncStorage.getItem('customerReminders');
     const remindersArray = reminders ? JSON.parse(reminders) : [];
     
-    // Remove existing reminder for this customer if updating
     const filteredReminders = remindersArray.filter((reminder: any) => reminder.id !== customerId);
     
     filteredReminders.push({
@@ -661,7 +658,6 @@ const storeReminder = async (
   }
 };
 
-// Function to remove reminder from local storage
 const removeReminder = async (customerId: string) => {
   try {
     const reminders = await AsyncStorage.getItem('customerReminders');
@@ -675,7 +671,6 @@ const removeReminder = async (customerId: string) => {
   }
 };
 
-// Function to send SMS
 const sendSMSReminder = async (phone: string, message: string, customerName: string) => {
   try {
     const isAvailable = await SMS.isAvailableAsync();
@@ -700,13 +695,9 @@ const sendSMSReminder = async (phone: string, message: string, customerName: str
   }
 };
 
-// Function to send WhatsApp message
 const sendWhatsAppReminder = async (phone: string, message: string, customerName: string) => {
   try {
-    // Clean phone number (remove spaces, dashes, parentheses)
     const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    
-    // Add country code if not present (assuming India +91, change as needed)
     const formattedPhone = cleanPhone.startsWith('+') ? cleanPhone.slice(1) : 
                           cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
     
@@ -752,7 +743,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
   const [notificationMethod, setNotificationMethod] = useState<NotificationMethod>('sms');
   const [customMessage, setCustomMessage] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState<boolean>(false);
+  const [processingPhoto, setProcessingPhoto] = useState<boolean>(false);
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
 
@@ -761,7 +752,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
       setName(customerToEdit.name || "");
       setPhone(customerToEdit.phone || "");
       setAddress(customerToEdit.address || "");
-      setPhoto(customerToEdit.photoURL || customerToEdit.photo);
+      setPhoto(customerToEdit.photoBase64 || customerToEdit.photoURL || customerToEdit.photo);
       // setNotificationMethod(customerToEdit.notificationMethod || 'sms');
       setCustomMessage(customerToEdit.customMessage || "");
       if (customerToEdit.notifyDate) {
@@ -772,7 +763,6 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
   
   useEffect(() => {
     (async () => {
-      // Request camera permission
       const { status: camStatus } = await ImagePicker.requestCameraPermissionsAsync();
       if (camStatus !== "granted") {
         Alert.alert("Permission Required", "Camera permission is recommended to take photos.");
@@ -780,22 +770,37 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
     })();
   }, []);
 
-  // Set default message when name changes (only for new customers)
   useEffect(() => {
     if (name.trim() && !customMessage.trim() && !isEditing) {
-      setCustomMessage(`Hi ${name.trim()}, this is a friendly reminder from our business. Hope you're doing well!`);
+      setCustomMessage(`Hi ${name.trim()}, this is a friendly reminder about your water purifier service. Hope you're doing well!`);
     }
   }, [name, isEditing]);
+
+  const convertToBase64 = async (uri: string): Promise<string> => {
+    try {
+      setProcessingPhoto(true);
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: "base64",
+      });
+      return `data:image/jpeg;base64,${base64}`;
+    } catch (error) {
+      console.error("Error converting to base64:", error);
+      throw new Error("Failed to process image");
+    } finally {
+      setProcessingPhoto(false);
+    }
+  };
 
   const takePhoto = async () => {
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
-      quality: 0.6,
-      aspect: [1, 1],
+      quality: 0.5,
+      aspect: [4, 3],
     });
 
     if (!result.canceled && result.assets?.length) {
-      setPhoto(result.assets[0].uri);
+      const base64Photo = await convertToBase64(result.assets[0].uri);
+      setPhoto(base64Photo);
     }
   };
 
@@ -808,18 +813,19 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       allowsEditing: true,
-      quality: 0.6,
-      aspect: [1, 1],
+      quality: 0.5,
+      aspect: [4, 3],
     });
 
     if (!result.canceled && result.assets?.length) {
-      setPhoto(result.assets[0].uri);
+      const base64Photo = await convertToBase64(result.assets[0].uri);
+      setPhoto(base64Photo);
     }
   };
 
   const showPhotoOptions = () => {
     Alert.alert(
-      "Select Photo",
+      "Water Purifier Photo",
       "Choose how you'd like to add a photo",
       [
         { text: "Cancel", style: "cancel" },
@@ -828,28 +834,6 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
         ...(photo ? [{ text: "Remove Photo", onPress: () => setPhoto(undefined), style: "destructive" as const }] : [])
       ]
     );
-  };
-
-  const uploadImageAsync = async (uri: string): Promise<string> => {
-    try {
-      setUploadingPhoto(true);
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).slice(2);
-      const filename = `customers/${timestamp}_${randomString}.jpg`;
-
-      const storageRef = ref(storage, filename);
-      await uploadBytes(storageRef, blob, { contentType: 'image/jpeg' });
-      const url = await getDownloadURL(storageRef);
-      return url;
-    } catch (error) {
-      console.error("Upload error:", error);
-      throw new Error("Failed to upload image. Please try again.");
-    } finally {
-      setUploadingPhoto(false);
-    }
   };
 
   const validateForm = () => {
@@ -866,20 +850,17 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
       return false;
     }
 
-    // Basic phone validation
     const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
     if (!phoneRegex.test(phone.trim())) {
       Alert.alert("Validation Error", "Please enter a valid phone number");
       return false;
     }
 
-    // Validate notification date if set
     if (notifyDate && notifyDate <= new Date()) {
       Alert.alert("Validation Error", "Reminder date must be in the future");
       return false;
     }
 
-    // Validate custom message if reminder is set
     if (notifyDate && !customMessage.trim()) {
       Alert.alert("Validation Error", "Please enter a reminder message");
       return false;
@@ -924,46 +905,31 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
 
     setSaving(true);
     try {
-      let photoURL: string | null = null;
-      
-      // Handle photo upload - only upload if it's a new photo (local URI)
-      if (photo) {
-        if (photo.startsWith('file://') || photo.startsWith('content://')) {
-          // This is a new photo that needs to be uploaded
-          photoURL = await uploadImageAsync(photo);
-        } else {
-          // This is an existing photo URL from Firestore
-          photoURL = photo;
-        }
-      }
-
       const customerData = {
         name: name.trim(),
         phone: phone.trim(),
         address: address.trim(),
-        photoURL: photoURL || null,
-        notifyDate: notifyDate || null,
+        photoBase64: photo || null,
+        notifyDate: notifyDate ? notifyDate.toISOString() : null,
         notificationMethod: notificationMethod,
         customMessage: customMessage.trim(),
-        ...(isEditing ? { updatedAt: serverTimestamp() } : { createdAt: serverTimestamp() })
+        updatedAt: serverTimestamp(),
+        ...(isEditing ? {} : { createdAt: serverTimestamp() })
       };
 
       let customerId: string;
 
       if (isEditing && customerToEdit?.id) {
-        // Update existing customer
         const customerRef = doc(db, "customers", customerToEdit.id);
         await updateDoc(customerRef, customerData);
         customerId = customerToEdit.id;
         console.log("Updated customer id:", customerId);
       } else {
-        // Create new customer
         const docRef = await addDoc(collection(db, "customers"), customerData);
         customerId = docRef.id;
         console.log("Created new customer id:", customerId);
       }
 
-      // Handle reminders in local storage
       if (notifyDate) {
         await storeReminder(
           customerId, 
@@ -974,26 +940,25 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
           customMessage.trim()
         );
       } else {
-        // Remove reminder if no notify date is set
         await removeReminder(customerId);
       }
 
-      // Show success message
       const methodText = notificationMethod === 'both' ? 'SMS & WhatsApp' : 
                         notificationMethod === 'whatsapp' ? 'WhatsApp' : 'SMS';
       
       const actionText = isEditing ? "updated" : "added";
       const successMessage = notifyDate 
-        ? `Customer ${actionText} successfully! Reminder set for ${notifyDate.toLocaleDateString()} at ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} via ${methodText}.\n\nNote: Since you're using Expo Go, reminders are stored locally. The app will attempt to send ${methodText} when the reminder time arrives.`
+        ? `Customer ${actionText} successfully! Reminder set for ${notifyDate.toLocaleDateString()} at ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} via ${methodText}.`
         : `Customer ${actionText} successfully!`;
         
       Alert.alert("Success", successMessage, [
         { text: "OK", onPress: () => navigation.goBack() }
       ]);
-    } catch (err) {
+    } catch (err: any) {
       console.error("handleSave error:", err);
       const actionText = isEditing ? "update" : "save";
-      Alert.alert("Error", `Failed to ${actionText} customer. Please check your internet connection and try again.`);
+      const errorMessage = err.message || `Failed to ${actionText} customer. Please check your internet connection and try again.`;
+      Alert.alert("Error", errorMessage);
     } finally {
       setSaving(false);
     }
@@ -1012,7 +977,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>
-            {isEditing ? "Edit Customer" : "Add New Customer"}
+            {isEditing ? "✏️ Edit Customer" : "➕ Add New Customer"}
           </Text>
           <Text style={styles.headerSubtitle}>
             {isEditing ? "Update customer details" : "Fill in the customer details"}
@@ -1020,25 +985,46 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
         </View>
 
         <View style={styles.formContainer}>
-          {/* Photo Section */}
+          {/* Water Purifier Photo Section */}
           <View style={styles.photoSection}>
-            <Text style={styles.sectionTitle}>Customer Photo</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>💧 Water Purifier Photo</Text>
+              <Text style={styles.optionalBadge}>Optional</Text>
+            </View>
+            <Text style={styles.sectionDescription}>
+              Add a photo of the water purifier for reference
+            </Text>
+            
             <View style={styles.photoContainer}>
               {photo ? (
                 <View style={styles.photoWrapper}>
-                  <Image source={{ uri: photo }} style={styles.customerPhoto} />
-                  <TouchableOpacity style={styles.changePhotoButton} onPress={showPhotoOptions}>
-                    <Text style={styles.changePhotoText}>Change</Text>
-                  </TouchableOpacity>
+                  <Image source={{ uri: photo }} style={styles.purifierPhoto} />
+                  <View style={styles.photoOverlay}>
+                    <TouchableOpacity 
+                      style={styles.photoActionButton} 
+                      onPress={showPhotoOptions}
+                    >
+                      <Text style={styles.photoActionText}>Change Photo</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : (
-                <TouchableOpacity style={styles.addPhotoButton} onPress={showPhotoOptions} disabled={uploadingPhoto}>
-                  {uploadingPhoto ? (
-                    <ActivityIndicator color="#007bff" />
+                <TouchableOpacity 
+                  style={styles.addPhotoContainer} 
+                  onPress={showPhotoOptions} 
+                  disabled={processingPhoto}
+                >
+                  {processingPhoto ? (
+                    <ActivityIndicator color="#007bff" size="large" />
                   ) : (
                     <>
-                      <Text style={styles.addPhotoIcon}>📷</Text>
-                      <Text style={styles.addPhotoText}>Add Photo</Text>
+                      <View style={styles.addPhotoIconContainer}>
+                        <Text style={styles.addPhotoIcon}>📷</Text>
+                      </View>
+                      <Text style={styles.addPhotoTitle}>Add Photo</Text>
+                      <Text style={styles.addPhotoSubtitle}>
+                        Take a photo or choose from gallery
+                      </Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -1046,12 +1032,19 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
             </View>
           </View>
 
-          {/* Form Fields */}
-          <View style={styles.inputSection}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Customer Name *</Text>
+          {/* Customer Details Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>👤 Customer Details</Text>
+              <Text style={styles.requiredBadge}>Required</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                Full Name <Text style={styles.required}>*</Text>
+              </Text>
               <TextInput
-                placeholder="Enter full name"
+                placeholder="Enter customer's full name"
                 style={styles.input}
                 value={name}
                 onChangeText={setName}
@@ -1060,10 +1053,12 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
               />
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Phone Number *</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                Phone Number <Text style={styles.required}>*</Text>
+              </Text>
               <TextInput
-                placeholder="Enter phone number (with country code)"
+                placeholder="+91 XXXXX XXXXX"
                 style={styles.input}
                 value={phone}
                 onChangeText={setPhone}
@@ -1073,10 +1068,12 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
               />
             </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Address *</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                Address <Text style={styles.required}>*</Text>
+              </Text>
               <TextInput
-                placeholder="Enter full address"
+                placeholder="Enter full address with landmark"
                 style={[styles.input, styles.textArea]}
                 value={address}
                 onChangeText={setAddress}
@@ -1088,25 +1085,25 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
             </View>
           </View>
 
-          {/* Notification Section */}
-          <View style={styles.notificationSection}>
-            <Text style={styles.sectionTitle}>Reminder Settings (Optional)</Text>
-            <Text style={styles.sectionSubtitle}>
-              Set a date, time, and method to send reminders to this customer{"\n"}
-              <Text style={styles.expoGoNote}>
-                📱 Note: Using Expo Go - supports SMS & WhatsApp
-              </Text>
+          {/* Reminder Settings Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>🔔 Reminder Settings</Text>
+              <Text style={styles.optionalBadge}>Optional</Text>
+            </View>
+            <Text style={styles.sectionDescription}>
+              Set automatic reminders for service follow-ups
             </Text>
 
-            {/* Notification Method Selection */}
             <View style={styles.methodSelection}>
-              <Text style={styles.methodLabel}>Notification Method:</Text>
+              <Text style={styles.methodLabel}>Notification Method</Text>
               <View style={styles.methodButtons}>
                 <TouchableOpacity
                   style={[styles.methodButton, notificationMethod === 'sms' && styles.methodButtonActive]}
                   onPress={() => setNotificationMethod('sms')}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.methodButtonIcon}>💬</Text>
+                  <Text style={styles.methodIcon}>💬</Text>
                   <Text style={[styles.methodButtonText, notificationMethod === 'sms' && styles.methodButtonTextActive]}>
                     SMS
                   </Text>
@@ -1115,8 +1112,9 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
                 <TouchableOpacity
                   style={[styles.methodButton, notificationMethod === 'whatsapp' && styles.methodButtonActive]}
                   onPress={() => setNotificationMethod('whatsapp')}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.methodButtonIcon}>📱</Text>
+                  <Text style={styles.methodIcon}>📱</Text>
                   <Text style={[styles.methodButtonText, notificationMethod === 'whatsapp' && styles.methodButtonTextActive]}>
                     WhatsApp
                   </Text>
@@ -1125,8 +1123,9 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
                 <TouchableOpacity
                   style={[styles.methodButton, notificationMethod === 'both' && styles.methodButtonActive]}
                   onPress={() => setNotificationMethod('both')}
+                  activeOpacity={0.7}
                 >
-                  <Text style={styles.methodButtonIcon}>📲</Text>
+                  <Text style={styles.methodIcon}>📲</Text>
                   <Text style={[styles.methodButtonText, notificationMethod === 'both' && styles.methodButtonTextActive]}>
                     Both
                   </Text>
@@ -1134,54 +1133,56 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.notificationButton}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.notificationIcon}>📅</Text>
-              <View style={styles.notificationTextContainer}>
-                <Text style={styles.notificationTitle}>Pick Date</Text>
-                <Text style={styles.notificationSubtitle}>
-                  {notifyDate
-                    ? notifyDate.toLocaleDateString()
-                    : "Tap to choose a date"}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.dateTimeRow}>
+              <TouchableOpacity
+                style={styles.dateTimeButton}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dateTimeIcon}>📅</Text>
+                <View style={styles.dateTimeContent}>
+                  <Text style={styles.dateTimeLabel}>Date</Text>
+                  <Text style={styles.dateTimeValue}>
+                    {notifyDate ? notifyDate.toLocaleDateString() : "Select date"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.notificationButton}
-              onPress={() => setShowTimePicker(true)}
-            >
-              <Text style={styles.notificationIcon}>⏰</Text>
-              <View style={styles.notificationTextContainer}>
-                <Text style={styles.notificationTitle}>Pick Time</Text>
-                <Text style={styles.notificationSubtitle}>
-                  {notifyDate
-                    ? notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : "Tap to choose a time"}
-                </Text>
-              </View>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dateTimeButton}
+                onPress={() => setShowTimePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dateTimeIcon}>⏰</Text>
+                <View style={styles.dateTimeContent}>
+                  <Text style={styles.dateTimeLabel}>Time</Text>
+                  <Text style={styles.dateTimeValue}>
+                    {notifyDate ? notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Select time"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
 
-            {/* Custom Message Input */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Reminder Message</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Custom Message</Text>
               <TextInput
                 placeholder="Enter your reminder message..."
                 style={[styles.input, styles.textArea]}
                 value={customMessage}
                 onChangeText={setCustomMessage}
                 multiline={true}
-                numberOfLines={3}
+                numberOfLines={4}
                 placeholderTextColor="#999"
                 textAlignVertical="top"
               />
             </View>
 
-            {/* Test Notification Button */}
-            {phone.trim() && (
-              <TouchableOpacity style={styles.testButton} onPress={testNotification}>
+            {phone.trim() && customMessage.trim() && (
+              <TouchableOpacity 
+                style={styles.testButton} 
+                onPress={testNotification}
+                activeOpacity={0.8}
+              >
                 <Text style={styles.testButtonIcon}>🧪</Text>
                 <Text style={styles.testButtonText}>Test Notification</Text>
               </TouchableOpacity>
@@ -1189,20 +1190,32 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
 
             {notifyDate && (
               <View style={styles.reminderPreview}>
-                <Text style={styles.reminderPreviewLabel}>Reminder set for:</Text>
-                <Text style={styles.reminderPreviewText}>
-                  {notifyDate.toLocaleDateString()} at {notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                <View style={styles.reminderPreviewHeader}>
+                  <Text style={styles.reminderPreviewTitle}>✓ Reminder Scheduled</Text>
+                  <TouchableOpacity 
+                    onPress={() => setNotifyDate(null)}
+                    style={styles.clearButton}
+                  >
+                    <Text style={styles.clearButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.reminderPreviewDate}>
+                  {notifyDate.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
                 </Text>
-                <Text style={styles.reminderMethodText}>
-                  via {notificationMethod === 'both' ? 'SMS & WhatsApp' : 
-                      notificationMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
+                <Text style={styles.reminderPreviewTime}>
+                  at {notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </Text>
-                <TouchableOpacity 
-                  style={styles.clearReminderButton}
-                  onPress={() => setNotifyDate(null)}
-                >
-                  <Text style={styles.clearReminderText}>Clear Reminder</Text>
-                </TouchableOpacity>
+                <View style={styles.reminderMethodBadge}>
+                  <Text style={styles.reminderMethodText}>
+                    via {notificationMethod === 'both' ? 'SMS & WhatsApp' : 
+                        notificationMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -1244,31 +1257,36 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
               />
             )}
           </View>
+        </View>
 
-          {/* Action Buttons */}
-          <View style={styles.actionButtons}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => navigation.goBack()}
-              disabled={saving}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+            disabled={saving}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-              onPress={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+            activeOpacity={0.8}
+          >
+            {saving ? (
+              <View style={styles.savingContainer}>
                 <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.saveButtonText}>
-                  {isEditing ? "Update Customer" : "Save Customer"}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
+                <Text style={styles.savingText}>Saving...</Text>
+              </View>
+            ) : (
+              <Text style={styles.saveButtonText}>
+                {isEditing ? "💾 Update Customer" : "✓ Save Customer"}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -1278,212 +1296,269 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "#f5f7fa",
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 30,
   },
   header: {
-    padding: 20,
-    paddingBottom: 10,
+    backgroundColor: "#fff",
+    padding: 24,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e8ecef",
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#1a1a1a",
-    textAlign: "center",
+    marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-    marginTop: 4,
+    fontSize: 15,
+    color: "#6c757d",
   },
   formContainer: {
-    margin: 20,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    padding: 16,
   },
-  photoSection: {
-    marginBottom: 24,
+  section: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 12,
+    fontWeight: "700",
+    color: "#1a1a1a",
   },
-  sectionSubtitle: {
+  sectionDescription: {
     fontSize: 14,
-    color: "#666",
-    marginBottom: 16,
+    color: "#6c757d",
+    marginBottom: 20,
+    lineHeight: 20,
   },
-  expoGoNote: {
-    fontSize: 12,
-    color: "#f39c12",
-    fontStyle: "italic",
+  optionalBadge: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#6c757d",
+    backgroundColor: "#e9ecef",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  requiredBadge: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#fff",
+    backgroundColor: "#dc3545",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  photoSection: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   photoContainer: {
     alignItems: "center",
   },
   photoWrapper: {
     position: "relative",
+    width: "100%",
+    aspectRatio: 4 / 3,
+    borderRadius: 12,
+    overflow: "hidden",
   },
-  customerPhoto: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  purifierPhoto: {
+    width: "100%",
+    height: "100%",
     backgroundColor: "#f0f0f0",
   },
-  changePhotoButton: {
+  photoOverlay: {
     position: "absolute",
     bottom: 0,
+    left: 0,
     right: 0,
-    backgroundColor: "#007bff",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    padding: 12,
+    alignItems: "center",
   },
-  changePhotoText: {
+  photoActionButton: {
+    paddingVertical: 6,
+  },
+  photoActionText: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
   },
-  addPhotoButton: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  addPhotoContainer: {
+    width: "100%",
+    aspectRatio: 4 / 3,
+    borderRadius: 12,
     backgroundColor: "#f8f9fa",
     borderWidth: 2,
-    borderColor: "#e1e5e9",
+    borderColor: "#dee2e6",
     borderStyle: "dashed",
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
+  },
+  addPhotoIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#e7f3ff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
   },
   addPhotoIcon: {
     fontSize: 32,
+  },
+  addPhotoTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1a1a1a",
     marginBottom: 4,
   },
-  addPhotoText: {
-    color: "#666",
-    fontSize: 14,
-    fontWeight: "500",
+  addPhotoSubtitle: {
+    fontSize: 13,
+    color: "#6c757d",
+    textAlign: "center",
   },
-  inputSection: {
-    marginBottom: 24,
-  },
-  inputContainer: {
+  inputGroup: {
     marginBottom: 20,
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
+    color: "#495057",
     marginBottom: 8,
+  },
+  required: {
+    color: "#dc3545",
+    fontWeight: "bold",
   },
   input: {
     borderWidth: 1.5,
-    borderColor: "#e1e5e9",
-    padding: 16,
-    borderRadius: 8,
-    fontSize: 16,
+    borderColor: "#dee2e6",
+    padding: 14,
+    borderRadius: 10,
+    fontSize: 15,
     backgroundColor: "#fff",
-    color: "#333",
+    color: "#212529",
   },
   textArea: {
-    minHeight: 80,
-    maxHeight: 120,
-  },
-  notificationSection: {
-    marginBottom: 32,
+    minHeight: 100,
+    maxHeight: 150,
+    paddingTop: 14,
   },
   methodSelection: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   methodLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
+    color: "#495057",
+    marginBottom: 12,
   },
   methodButtons: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
   methodButton: {
     flex: 1,
     flexDirection: "column",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: "#e1e5e9",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#dee2e6",
     backgroundColor: "#f8f9fa",
   },
   methodButtonActive: {
     borderColor: "#007bff",
     backgroundColor: "#e7f3ff",
   },
-  methodButtonIcon: {
-    fontSize: 20,
-    marginBottom: 4,
+  methodIcon: {
+    fontSize: 24,
+    marginBottom: 6,
   },
   methodButtonText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#666",
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#6c757d",
   },
   methodButtonTextActive: {
     color: "#007bff",
-    fontWeight: "600",
   },
-  notificationButton: {
+  dateTimeRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 20,
+  },
+  dateTimeButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#f8f9fa",
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e1e5e9",
-    marginBottom: 12,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#dee2e6",
   },
-  notificationIcon: {
+  dateTimeIcon: {
     fontSize: 24,
     marginRight: 12,
   },
-  notificationTextContainer: {
+  dateTimeContent: {
     flex: 1,
   },
-  notificationTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
+  dateTimeLabel: {
+    fontSize: 12,
+    color: "#6c757d",
     marginBottom: 2,
   },
-  notificationSubtitle: {
+  dateTimeValue: {
     fontSize: 14,
-    color: "#666",
+    fontWeight: "600",
+    color: "#212529",
   },
   testButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#17a2b8",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    padding: 14,
+    borderRadius: 10,
+    marginTop: 12,
+    shadowColor: "#17a2b8",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   testButtonIcon: {
     fontSize: 18,
@@ -1491,58 +1566,82 @@ const styles = StyleSheet.create({
   },
   testButtonText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "600",
   },
   reminderPreview: {
-    backgroundColor: "#e8f5e8",
+    backgroundColor: "#d4edda",
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#c3e6c3",
-    marginTop: 8,
+    borderColor: "#c3e6cb",
+    marginTop: 16,
   },
-  reminderPreviewLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#2d5a2d",
-    marginBottom: 4,
-  },
-  reminderPreviewText: {
-    fontSize: 16,
-    color: "#2d5a2d",
-    marginBottom: 4,
-  },
-  reminderMethodText: {
-    fontSize: 14,
-    color: "#2d5a2d",
-    fontStyle: "italic",
+  reminderPreviewHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
-  clearReminderButton: {
-    alignSelf: "flex-start",
+  reminderPreviewTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#155724",
   },
-  clearReminderText: {
+  clearButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#155724",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  clearButtonText: {
+    color: "#fff",
     fontSize: 14,
-    color: "#dc3545",
-    fontWeight: "500",
-    textDecorationLine: "underline",
+    fontWeight: "bold",
+  },
+  reminderPreviewDate: {
+    fontSize: 15,
+    color: "#155724",
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  reminderPreviewTime: {
+    fontSize: 14,
+    color: "#155724",
+    marginBottom: 8,
+  },
+  reminderMethodBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#155724",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  reminderMethodText: {
+    fontSize: 12,
+    color: "#fff",
+    fontWeight: "600",
   },
   actionButtons: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    paddingHorizontal: 16,
     gap: 12,
+    marginTop: 8,
   },
   cancelButton: {
     flex: 1,
     padding: 16,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: "#e1e5e9",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#dee2e6",
+    backgroundColor: "#fff",
     alignItems: "center",
+    justifyContent: "center",
   },
   cancelButtonText: {
-    color: "#666",
+    color: "#6c757d",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -1550,25 +1649,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#28a745",
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#28a745",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 5,
   },
   saveButtonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: "#94d3a2",
     shadowOpacity: 0,
     elevation: 0,
   },
   saveButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "700",
+  },
+  savingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  savingText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

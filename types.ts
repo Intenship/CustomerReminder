@@ -7,6 +7,7 @@ export interface Customer {
   address: string;
   // local preview we used before (optional)
   photo?: string;
+  photoBase64?: string;
   // URL after upload to Firebase Storage
   photoURL?: string | null;
   customMessage?: string;

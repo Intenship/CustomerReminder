@@ -868,7 +868,7 @@ export default function HomeScreen({ navigation }: Props) {
                 name: data.name || "",
                 phone: data.phone || "",
                 address: data.address || "",
-                photoURL: data.photoURL || data.photo || null,
+                photoURL: data.photoBase64 || data.photo || null,
                 notifyDate: data.notifyDate?.toDate ? data.notifyDate.toDate() : data.notifyDate,
                 notificationMethod: data.notificationMethod || 'sms',
                 customMessage: data.customMessage || '',
@@ -1084,19 +1084,19 @@ export default function HomeScreen({ navigation }: Props) {
     >
       <View style={styles.cardContent}>
         <View style={styles.photoContainer}>
-          {item.photoURL ? (
+          {/* {item.photoURL ? (
             <Image 
               source={{ uri: item.photoURL }} 
               style={styles.customerPhoto}
               onError={(error) => console.log("Image load error:", error)}
             />
-          ) : (
+          ) : ( */}
             <View style={styles.placeholderPhoto}>
               <Text style={styles.placeholderText}>
                 {item.name?.charAt(0)?.toUpperCase() || "?"}
               </Text>
             </View>
-          )}
+          {/* )} */}
         </View>
         
         <View style={styles.customerInfo}>

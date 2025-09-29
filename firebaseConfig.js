@@ -13,7 +13,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyA2nXjOqnjzk7J12FBJfdaP-EnODFyz7e4",
   authDomain: "trafficupdates-90fa0.firebaseapp.com",
   projectId: "trafficupdates-90fa0",
-  storageBucket: "trafficupdates-90fa0.appspot.com",
+  storageBucket: "trafficupdates-90fa0.firebasestorage.app", 
   messagingSenderId: "936285740352",
   appId: "1:936285740352:android:8b80f44b1cd7aad726aea5",
 };
