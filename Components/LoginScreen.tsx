@@ -213,11 +213,12 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-  scrollContainer: {
+ scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 20,
     paddingVertical: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 50,
   },
   logoContainer: {
     alignItems: "center",

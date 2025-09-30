@@ -1596,7 +1596,7 @@ const styles = StyleSheet.create({
   },
   floatingAddButton: {
     position: "absolute",
-    bottom: 20,
+    bottom: Platform.OS === 'ios' ? 90 : 70,
     right: 20,
     width: 48,
     height: 48,
