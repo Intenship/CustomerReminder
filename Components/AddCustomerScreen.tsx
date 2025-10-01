@@ -613,6 +613,7 @@ import { db } from "../firebaseConfig";
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { RouteProp } from "@react-navigation/native";
+import * as Notifications from "expo-notifications";
 
 type AddCustomerRouteProp = RouteProp<RootStackParamList, "AddCustomer">;
 type AddCustomerNavigationProp = NativeStackNavigationProp<
@@ -627,20 +628,22 @@ type Props = {
 
 type NotificationMethod = 'sms' | 'whatsapp' | 'both';
 
+
 const storeReminder = async (
-  customerId: string, 
-  customerName: string, 
+  customerId: string,
+  customerName: string,
   phone: string,
-  date: Date, 
+  date: Date,
   notificationMethod: NotificationMethod,
-  customMessage?: string
+  customMessage?: string,
+  notificationId?: string
 ) => {
   try {
     const reminders = await AsyncStorage.getItem('customerReminders');
     const remindersArray = reminders ? JSON.parse(reminders) : [];
-    
+
     const filteredReminders = remindersArray.filter((reminder: any) => reminder.id !== customerId);
-    
+
     filteredReminders.push({
       id: customerId,
       name: customerName,
@@ -649,9 +652,10 @@ const storeReminder = async (
       notificationMethod: notificationMethod,
       customMessage: customMessage || `Hi ${customerName}, this is a friendly reminder from our business. Hope you're doing well!`,
       created: new Date().toISOString(),
-      sent: false
+      sent: false,
+      notificationId: notificationId || null,
     });
-    
+
     await AsyncStorage.setItem('customerReminders', JSON.stringify(filteredReminders));
   } catch (error) {
     console.error('Failed to store reminder:', error);
@@ -663,13 +667,22 @@ const removeReminder = async (customerId: string) => {
     const reminders = await AsyncStorage.getItem('customerReminders');
     if (reminders) {
       const remindersArray = JSON.parse(reminders);
-      const filteredReminders = remindersArray.filter((reminder: any) => reminder.id !== customerId);
+      const reminder = remindersArray.find((r: any) => r.id === customerId);
+
+      // Cancel scheduled notification if exists
+      if (reminder?.notificationId) {
+        await Notifications.cancelScheduledNotificationAsync(reminder.notificationId);
+        console.log("✅ Cancelled scheduled notification:", reminder.notificationId);
+      }
+
+      const filteredReminders = remindersArray.filter((r: any) => r.id !== customerId);
       await AsyncStorage.setItem('customerReminders', JSON.stringify(filteredReminders));
     }
   } catch (error) {
     console.error('Failed to remove reminder:', error);
   }
 };
+
 
 const sendSMSReminder = async (phone: string, message: string, customerName: string) => {
   try {
@@ -680,7 +693,7 @@ const sendSMSReminder = async (phone: string, message: string, customerName: str
     }
 
     const { result } = await SMS.sendSMSAsync([phone], message);
-    
+
     if (result === 'sent') {
       console.log(`SMS sent successfully to ${customerName} (${phone})`);
       return true;
@@ -698,21 +711,21 @@ const sendSMSReminder = async (phone: string, message: string, customerName: str
 const sendWhatsAppReminder = async (phone: string, message: string, customerName: string) => {
   try {
     const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    const formattedPhone = cleanPhone.startsWith('+') ? cleanPhone.slice(1) : 
-                          cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
-    
+    const formattedPhone = cleanPhone.startsWith('+') ? cleanPhone.slice(1) :
+      cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `whatsapp://send?phone=${formattedPhone}&text=${encodedMessage}`;
-    
+
     const supported = await Linking.canOpenURL(whatsappUrl);
-    
+
     if (supported) {
       await Linking.openURL(whatsappUrl);
       console.log(`WhatsApp opened for ${customerName} (${phone})`);
       return true;
     } else {
       Alert.alert(
-        'WhatsApp Not Available', 
+        'WhatsApp Not Available',
         'WhatsApp is not installed on this device',
         [
           {
@@ -734,7 +747,7 @@ const sendWhatsAppReminder = async (phone: string, message: string, customerName
 export default function AddCustomerScreen({ navigation, route }: Props) {
   const { customerToEdit } = route.params || {};
   const isEditing = !!customerToEdit;
-  
+
   const [name, setName] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [address, setAddress] = useState<string>("");
@@ -760,7 +773,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
       }
     }
   }, [customerToEdit]);
-  
+
   useEffect(() => {
     (async () => {
       const { status: camStatus } = await ImagePicker.requestCameraPermissionsAsync();
@@ -931,26 +944,29 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
       }
 
       if (notifyDate) {
+        const notificationId = await scheduleReminder(notifyDate, customMessage.trim());
+
         await storeReminder(
-          customerId, 
-          name.trim(), 
+          customerId,
+          name.trim(),
           phone.trim(),
-          notifyDate, 
+          notifyDate,
           notificationMethod,
-          customMessage.trim()
+          customMessage.trim(),
+          notificationId 
         );
       } else {
         await removeReminder(customerId);
       }
 
-      const methodText = notificationMethod === 'both' ? 'SMS & WhatsApp' : 
-                        notificationMethod === 'whatsapp' ? 'WhatsApp' : 'SMS';
-      
+      const methodText = notificationMethod === 'both' ? 'SMS & WhatsApp' :
+        notificationMethod === 'whatsapp' ? 'WhatsApp' : 'SMS';
+
       const actionText = isEditing ? "updated" : "added";
-      const successMessage = notifyDate 
+      const successMessage = notifyDate
         ? `Customer ${actionText} successfully! Reminder set for ${notifyDate.toLocaleDateString()} at ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} via ${methodText}.`
         : `Customer ${actionText} successfully!`;
-        
+
       Alert.alert("Success", successMessage, [
         { text: "OK", onPress: () => navigation.goBack() }
       ]);
@@ -963,6 +979,36 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
       setSaving(false);
     }
   };
+
+const scheduleReminder = async (notifyDate: Date, customMessage: string): Promise<string> => {
+  try {
+    let scheduledDate = new Date(notifyDate);
+
+    // If the picked time is in the past, move to next day
+    if (scheduledDate <= new Date()) {
+      scheduledDate.setDate(scheduledDate.getDate() + 1);
+    }
+
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "⏰ Reminder",
+        body: customMessage || "You have a reminder!",
+        sound: true,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: scheduledDate,
+      },
+    });
+
+    console.log("✅ Reminder scheduled for:", scheduledDate, "with ID:", notificationId);
+    return notificationId;
+  } catch (error) {
+    console.error("❌ Error scheduling reminder:", error);
+    throw error;
+  }
+};
 
   return (
     <KeyboardAvoidingView
@@ -994,14 +1040,14 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
             <Text style={styles.sectionDescription}>
               Add a photo of the water purifier for reference
             </Text>
-            
+
             <View style={styles.photoContainer}>
               {photo ? (
                 <View style={styles.photoWrapper}>
                   <Image source={{ uri: photo }} style={styles.purifierPhoto} />
                   <View style={styles.photoOverlay}>
-                    <TouchableOpacity 
-                      style={styles.photoActionButton} 
+                    <TouchableOpacity
+                      style={styles.photoActionButton}
                       onPress={showPhotoOptions}
                     >
                       <Text style={styles.photoActionText}>Change Photo</Text>
@@ -1009,9 +1055,9 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
                   </View>
                 </View>
               ) : (
-                <TouchableOpacity 
-                  style={styles.addPhotoContainer} 
-                  onPress={showPhotoOptions} 
+                <TouchableOpacity
+                  style={styles.addPhotoContainer}
+                  onPress={showPhotoOptions}
                   disabled={processingPhoto}
                 >
                   {processingPhoto ? (
@@ -1108,7 +1154,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
                     SMS
                   </Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={[styles.methodButton, notificationMethod === 'whatsapp' && styles.methodButtonActive]}
                   onPress={() => setNotificationMethod('whatsapp')}
@@ -1119,7 +1165,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
                     WhatsApp
                   </Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={[styles.methodButton, notificationMethod === 'both' && styles.methodButtonActive]}
                   onPress={() => setNotificationMethod('both')}
@@ -1178,8 +1224,8 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
             </View>
 
             {phone.trim() && customMessage.trim() && (
-              <TouchableOpacity 
-                style={styles.testButton} 
+              <TouchableOpacity
+                style={styles.testButton}
                 onPress={testNotification}
                 activeOpacity={0.8}
               >
@@ -1192,7 +1238,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
               <View style={styles.reminderPreview}>
                 <View style={styles.reminderPreviewHeader}>
                   <Text style={styles.reminderPreviewTitle}>✓ Reminder Scheduled</Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setNotifyDate(null)}
                     style={styles.clearButton}
                   >
@@ -1200,11 +1246,11 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.reminderPreviewDate}>
-                  {notifyDate.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                  {notifyDate.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
                   })}
                 </Text>
                 <Text style={styles.reminderPreviewTime}>
@@ -1212,8 +1258,8 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
                 </Text>
                 <View style={styles.reminderMethodBadge}>
                   <Text style={styles.reminderMethodText}>
-                    via {notificationMethod === 'both' ? 'SMS & WhatsApp' : 
-                        notificationMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
+                    via {notificationMethod === 'both' ? 'SMS & WhatsApp' :
+                      notificationMethod === 'whatsapp' ? 'WhatsApp' : 'SMS'}
                   </Text>
                 </View>
               </View>
