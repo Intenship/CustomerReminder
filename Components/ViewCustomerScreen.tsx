@@ -1561,6 +1561,7 @@ const styles = StyleSheet.create({
     borderColor: "#ffcdd2",
     borderLeftWidth: 4,
     borderLeftColor: "#dc3545",
+    marginBottom:18
   },
   deleteIcon: {
     fontSize: 20,

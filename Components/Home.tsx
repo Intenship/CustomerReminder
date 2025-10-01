@@ -1,3 +1,719 @@
+// import React, { useEffect, useState } from "react";
+// import {
+//   View,
+//   Text,
+//   FlatList,
+//   TouchableOpacity,
+//   StyleSheet,
+//   Image,
+//   ActivityIndicator,
+//   RefreshControl,
+//   Alert,
+//   Linking,
+//   StatusBar,
+//   Platform,
+//   TextInput,
+//   Modal,
+// } from "react-native";
+// import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+// import { RootStackParamList, Customer } from "../types";
+// import { db, auth, waitForAuth, isUserAuthenticated } from "../firebaseConfig";
+// import { 
+//   collection, 
+//   query, 
+//   orderBy, 
+//   onSnapshot, 
+//   Unsubscribe, 
+//   doc, 
+//   deleteDoc,
+//   where,
+//   Timestamp,
+//   limit,
+//   startAfter,
+//   getDocs,
+//   QueryDocumentSnapshot,
+//   DocumentData
+// } from "firebase/firestore";
+// import { signOut, onAuthStateChanged } from "firebase/auth";
+
+// type HomeNavProp = NativeStackNavigationProp<RootStackParamList, "Home">;
+// type Props = { navigation: HomeNavProp };
+
+// type FilterPeriod = 'all' | '15days' | '1month' | '6months' | '1year' | '2years';
+
+// interface FilterOption {
+//   label: string;
+//   value: FilterPeriod;
+//   days: number | null;
+// }
+
+// const FILTER_OPTIONS: FilterOption[] = [
+//   { label: 'All Records', value: 'all', days: null },
+//   { label: 'Last 15 Days', value: '15days', days: 15 },
+//   { label: 'Last 1 Month', value: '1month', days: 30 },
+//   { label: 'Last 6 Months', value: '6months', days: 180 },
+//   { label: 'Last 1 Year', value: '1year', days: 365 },
+//   { label: 'Last 2 Years', value: '2years', days: 730 },
+// ];
+
+// const PAGE_SIZE = 10;
+
+// export default function HomeScreen({ navigation }: Props) {
+//   const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+//   const [displayedCustomers, setDisplayedCustomers] = useState<Customer[]>([]);
+//   const [searchQuery, setSearchQuery] = useState<string>("");
+//   const [selectedFilter, setSelectedFilter] = useState<FilterPeriod>('all');
+//   const [showFilterModal, setShowFilterModal] = useState<boolean>(false);
+//   const [loading, setLoading] = useState<boolean>(true);
+//   const [refreshing, setRefreshing] = useState<boolean>(false);
+//   const [authChecked, setAuthChecked] = useState<boolean>(false);
+//   const [deletingId, setDeletingId] = useState<string | null>(null);
+//   const [loadingMore, setLoadingMore] = useState<boolean>(false);
+//   const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+//   const [hasMore, setHasMore] = useState<boolean>(true);
+//   const [totalCount, setTotalCount] = useState<number>(0);
+
+//   // Listen to all data for count and real-time updates
+//   useEffect(() => {
+//     let firestoreUnsubscribe: Unsubscribe | null = null;
+
+//     const authUnsubscribe = onAuthStateChanged(auth, async (user) => {
+//       console.log("Auth state changed:", user ? `User: ${user.uid}` : "No user");
+//       setAuthChecked(true);
+
+//       if (!user) {
+//         console.log("No authenticated user, redirecting to login");
+//         setLoading(false);
+//         navigation.replace("Login");
+//         return;
+//       }
+
+//       console.log("User authenticated, setting up Firestore listener");
+      
+//       try {
+//         const q = query(collection(db, "customers"), orderBy("createdAt", "desc"));
+        
+//         firestoreUnsubscribe = onSnapshot(
+//           q,
+//           (snapshot) => {
+//             console.log("Firestore data received:", snapshot.docs.length, "documents");
+            
+//             const customerList = snapshot.docs.map((doc) => {
+//               const data = doc.data();
+              
+//               return {
+//                 id: doc.id,
+//                 name: data.name || "",
+//                 phone: data.phone || "",
+//                 address: data.address || "",
+//                 photoURL: data.photoBase64 || data.photo || null,
+//                 notifyDate: data.notifyDate?.toDate ? data.notifyDate.toDate() : data.notifyDate,
+//                 notificationMethod: data.notificationMethod || 'sms',
+//                 customMessage: data.customMessage || '',
+//                 createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+//               } as Customer;
+//             });
+
+//             setAllCustomers(customerList);
+//             setTotalCount(customerList.length);
+            
+//             if (loading) {
+//               const firstPage = customerList.slice(0, PAGE_SIZE);
+//               setDisplayedCustomers(firstPage);
+//               setHasMore(customerList.length > PAGE_SIZE);
+//               setLoading(false);
+//               setRefreshing(false);
+//             }
+//           },
+//           (error) => {
+//             console.error("Firestore onSnapshot error:", error);
+//             setLoading(false);
+//             setRefreshing(false);
+//             handleFirestoreError(error);
+//           }
+//         );
+//       } catch (error) {
+//         console.error("Error setting up Firestore listener:", error);
+//         setLoading(false);
+//         Alert.alert("Error", "Failed to initialize data connection");
+//       }
+//     });
+
+//     return () => {
+//       console.log("Cleaning up subscriptions");
+//       authUnsubscribe();
+//       if (firestoreUnsubscribe) {
+//         firestoreUnsubscribe();
+//       }
+//     };
+//   }, [navigation]);
+
+//   const fetchFirstPage = async () => {
+//     try {
+//       setLoading(true);
+      
+//       const filtered = applyFiltersToAllData();
+      
+//       const firstPage = filtered.slice(0, PAGE_SIZE);
+//       setDisplayedCustomers(firstPage);
+//       setHasMore(filtered.length > PAGE_SIZE);
+//       setLastVisible(null);
+      
+//       setLoading(false);
+//       setRefreshing(false);
+//     } catch (error) {
+//       console.error("Error fetching first page:", error);
+//       setLoading(false);
+//       setRefreshing(false);
+//       Alert.alert("Error", "Failed to load customers");
+//     }
+//   };
+
+//   const applyFiltersToAllData = (): Customer[] => {
+//     let filtered = [...allCustomers];
+    
+//     if (selectedFilter !== 'all') {
+//       const filterOption = FILTER_OPTIONS.find(opt => opt.value === selectedFilter);
+//       if (filterOption && filterOption.days) {
+//         const cutoffDate = new Date();
+//         cutoffDate.setDate(cutoffDate.getDate() - filterOption.days);
+        
+//         filtered = filtered.filter(customer => {
+//           const createdAt = customer.createdAt ? new Date(customer.createdAt) : null;
+//           return createdAt && createdAt >= cutoffDate;
+//         });
+//       }
+//     }
+    
+//     if (searchQuery.trim() !== "") {
+//       const searchLower = searchQuery.toLowerCase();
+//       filtered = filtered.filter((customer) =>
+//         customer.name.toLowerCase().includes(searchLower) ||
+//         customer.phone.toLowerCase().includes(searchLower) ||
+//         customer.address.toLowerCase().includes(searchLower)
+//       );
+//     }
+    
+//     return filtered;
+//   };
+
+//   const handleNextPage = async () => {
+//     if (loadingMore || !hasMore) return;
+    
+//     try {
+//       setLoadingMore(true);
+      
+//       const filtered = applyFiltersToAllData();
+//       const currentLength = displayedCustomers.length;
+//       const nextPage = filtered.slice(currentLength, currentLength + PAGE_SIZE);
+      
+//       if (nextPage.length > 0) {
+//         setDisplayedCustomers([...displayedCustomers, ...nextPage]);
+//         setHasMore(currentLength + nextPage.length < filtered.length);
+//       } else {
+//         setHasMore(false);
+//       }
+      
+//       setLoadingMore(false);
+//     } catch (error) {
+//       console.error("Error loading next page:", error);
+//       setLoadingMore(false);
+//       Alert.alert("Error", "Failed to load next page");
+//     }
+//   };
+
+//   const handlePreviousPage = async () => {
+//     if (loadingMore || displayedCustomers.length <= PAGE_SIZE) return;
+    
+//     try {
+//       setLoadingMore(true);
+      
+//       const newLength = Math.max(PAGE_SIZE, displayedCustomers.length - PAGE_SIZE);
+//       const filtered = applyFiltersToAllData();
+//       const newDisplayed = filtered.slice(0, newLength);
+      
+//       setDisplayedCustomers(newDisplayed);
+//       setHasMore(newLength < filtered.length);
+      
+//       setLoadingMore(false);
+//     } catch (error) {
+//       console.error("Error loading previous page:", error);
+//       setLoadingMore(false);
+//       Alert.alert("Error", "Failed to load previous page");
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (!loading && allCustomers.length > 0) {
+//       fetchFirstPage();
+//     }
+//   }, [selectedFilter, searchQuery]);
+
+//   const handleFirestoreError = (error: any) => {
+//     switch (error.code) {
+//       case 'permission-denied':
+//         Alert.alert(
+//           "Permission Denied",
+//           "You don't have permission to access the customer data.",
+//           [
+//             { text: "Retry", onPress: () => setLoading(true) },
+//             { text: "Logout", onPress: handleLogout }
+//           ]
+//         );
+//         break;
+      
+//       case 'unauthenticated':
+//         Alert.alert(
+//           "Authentication Required",
+//           "Please log in again to continue.",
+//           [{ text: "OK", onPress: () => navigation.replace("Login") }]
+//         );
+//         break;
+      
+//       case 'unavailable':
+//         Alert.alert(
+//           "Service Unavailable",
+//           "Unable to connect to the database. Please check your internet connection.",
+//           [{ text: "Retry", onPress: () => setLoading(true) }]
+//         );
+//         break;
+      
+//       default:
+//         Alert.alert(
+//           "Error Loading Data",
+//           `Failed to load customers: ${error.message}`,
+//           [
+//             { text: "Retry", onPress: () => setLoading(true) },
+//             { text: "Logout", onPress: handleLogout }
+//           ]
+//         );
+//     }
+//   };
+
+//   const handleFilterSelect = (filterValue: FilterPeriod) => {
+//     setSelectedFilter(filterValue);
+//     setShowFilterModal(false);
+//   };
+
+//   const onRefresh = () => {
+//     console.log("Refreshing data...");
+//     setRefreshing(true);
+//     fetchFirstPage();
+//   };
+
+//   const handleLogout = async () => {
+//     Alert.alert(
+//       "Logout",
+//       "Are you sure you want to logout?",
+//       [
+//         { text: "Cancel", style: "cancel" },
+//         {
+//           text: "Logout",
+//           style: "destructive",
+//           onPress: async () => {
+//             try {
+//               console.log("Logging out user");
+//               await signOut(auth);
+//               navigation.replace("Login");
+//             } catch (error) {
+//               console.error("Logout error:", error);
+//               Alert.alert("Error", "Failed to logout. Please try again.");
+//             }
+//           }
+//         }
+//       ]
+//     );
+//   };
+
+//   const handleDeleteCustomer = async (customerId: string, customerName: string) => {
+//     Alert.alert(
+//       "Delete Customer",
+//       `Are you sure you want to delete ${customerName}? This action cannot be undone.`,
+//       [
+//         { text: "Cancel", style: "cancel" },
+//         {
+//           text: "Delete",
+//           style: "destructive",
+//           onPress: async () => {
+//             try {
+//               setDeletingId(customerId);
+//               await deleteDoc(doc(db, "customers", customerId));
+//               Alert.alert("Success", `${customerName} has been deleted successfully.`);
+//             } catch (error) {
+//               console.error("Delete error:", error);
+//               Alert.alert("Error", "Failed to delete customer. Please try again.");
+//             } finally {
+//               setDeletingId(null);
+//             }
+//           }
+//         }
+//       ]
+//     );  
+//   };
+
+//   const handleEditCustomer = (customer: Customer) => {
+//     navigation.navigate("AddCustomer", { customerToEdit: customer });
+//   };
+
+//   const handleCallCustomer = (phone: string) => {
+//     if (!phone) {
+//       Alert.alert("Error", "No phone number available");
+//       return;
+//     }
+
+//     Alert.alert(
+//       "Call Customer",
+//       `Call ${phone}?`,
+//       [
+//         { text: "Cancel", style: "cancel" },
+//         {
+//           text: "Call",
+//           onPress: () => {
+//             Linking.openURL(`tel:${phone}`).catch((error) => {
+//               console.error("Failed to make call:", error);
+//               Alert.alert("Error", "Unable to make phone call");
+//             });
+//           }
+//         }
+//       ]
+//     );
+//   };
+
+//   const handleMessageCustomer = (phone: string) => {
+//     if (!phone) {
+//       Alert.alert("Error", "No phone number available");
+//       return;
+//     }
+
+//     Alert.alert(
+//       "Send Message",
+//       `Send SMS to ${phone}?`,
+//       [
+//         { text: "Cancel", style: "cancel" },
+//         {
+//           text: "Message",
+//           onPress: () => {
+//             Linking.openURL(`sms:${phone}`).catch((error) => {
+//               console.error("Failed to send message:", error);
+//               Alert.alert("Error", "Unable to send message");
+//             });
+//           }
+//         }
+//       ]
+//     );
+//   };
+
+//   const renderCustomerCard = ({ item }: { item: Customer }) => (
+//     <TouchableOpacity
+//       style={styles.customerCard}
+//       onPress={() => {
+//         navigation.navigate("ViewCustomer", { customer: item });
+//       }}
+//       activeOpacity={0.7}
+//     >
+//       <View style={styles.cardContent}>
+//         <View style={styles.photoContainer}>
+//           <View style={styles.placeholderPhoto}>
+//             <Text style={styles.placeholderText}>
+//               {item.name?.charAt(0)?.toUpperCase() || "?"}
+//             </Text>
+//           </View>
+//         </View>
+        
+//         <View style={styles.customerInfo}>
+//           <View style={styles.nameRow}>
+//             <Text style={styles.customerName} numberOfLines={1}>{item.name || "No Name"}</Text>
+//             {item.notifyDate && (
+//               <View style={styles.reminderBadge}>
+//                 <Text style={styles.reminderText}>!</Text>
+//               </View>
+//             )}
+//           </View>
+          
+//           <View style={styles.detailsRow}>
+//             <TouchableOpacity onPress={() => handleCallCustomer(item.phone)} style={styles.phoneContainer}>
+//               <Text style={styles.infoIcon}>📞</Text>
+//               <Text style={styles.customerPhone} numberOfLines={1}>{item.phone || "No Phone"}</Text>
+//             </TouchableOpacity>
+            
+//             <View style={styles.addressContainer}>
+//               <Text style={styles.infoIcon}>📍</Text>
+//               <Text style={styles.customerAddress} numberOfLines={1}>{item.address || "No Address"}</Text>
+//             </View>
+//           </View>
+          
+//           {item.notifyDate && (
+//             <View style={styles.reminderRow}>
+//               <Text style={styles.infoIcon}>🔔</Text>
+//               <Text style={styles.notificationDate} numberOfLines={1}>
+//                 {new Date(item.notifyDate).toLocaleDateString()}
+//               </Text>
+//             </View>
+//           )}
+//         </View>
+
+//         <View style={styles.actionButtons}>
+//           <TouchableOpacity
+//             style={styles.actionButton}
+//             onPress={() => handleCallCustomer(item.phone)}
+//           >
+//             <Text style={styles.actionIcon}>📞</Text>
+//           </TouchableOpacity>
+          
+//           <TouchableOpacity
+//             style={styles.actionButton}
+//             onPress={() => handleMessageCustomer(item.phone)}
+//           >
+//             <Text style={styles.actionIcon}>💬</Text>
+//           </TouchableOpacity>
+          
+//           <TouchableOpacity
+//             style={[styles.actionButton, styles.editButton]}
+//             onPress={() => handleEditCustomer(item)}
+//           >
+//             <Text style={styles.actionIcon}>✏️</Text>
+//           </TouchableOpacity>
+
+//           <TouchableOpacity
+//             style={[styles.actionButton, styles.deleteButton]}
+//             onPress={() => handleDeleteCustomer(item.id, item.name)}
+//             disabled={deletingId === item.id}
+//           >
+//             {deletingId === item.id ? (
+//               <ActivityIndicator size="small" color="#dc3545" />
+//             ) : (
+//               <Text style={styles.actionIcon}>🗑️</Text>
+//             )}
+//           </TouchableOpacity>
+//         </View>
+//       </View>
+//     </TouchableOpacity>
+//   );
+
+//   const renderEmptyState = () => (
+//     <View style={styles.emptyState}>
+//       <Text style={styles.emptyStateIcon}>👥</Text>
+//       <Text style={styles.emptyStateTitle}>
+//         {searchQuery || selectedFilter !== 'all' ? "No customers found" : "No Customers Yet"}
+//       </Text>
+//       <Text style={styles.emptyStateDescription}>
+//         {searchQuery || selectedFilter !== 'all'
+//           ? `No customers match your filters`
+//           : "Start by adding your first customer to build your customer base"
+//         }
+//       </Text>
+//       {!searchQuery && selectedFilter === 'all' && (
+//         <TouchableOpacity
+//           style={styles.addFirstCustomerButton}
+//           onPress={() => navigation.navigate("AddCustomer")}
+//         >
+//           <Text style={styles.addFirstCustomerButtonText}>Add First Customer</Text>
+//         </TouchableOpacity>
+//       )}
+//     </View>
+//   );
+
+//   const renderPaginationButtons = () => {
+//     if (loading) return null;
+
+//     const filtered = applyFiltersToAllData();
+//     const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+//     const currentPage = Math.floor(displayedCustomers.length / PAGE_SIZE);
+//     const hasNext = displayedCustomers.length < filtered.length;
+//     const hasPrevious = displayedCustomers.length > PAGE_SIZE;
+
+//     if (totalPages <= 1) return null;
+
+//     return (
+//       <View style={styles.paginationContainer}>
+//         <TouchableOpacity
+//           style={[styles.paginationButton, !hasPrevious && styles.paginationButtonDisabled]}
+//           onPress={handlePreviousPage}
+//           disabled={!hasPrevious || loadingMore}
+//         >
+//           <Text style={[styles.paginationButtonText, !hasPrevious && styles.paginationButtonTextDisabled]}>
+//             ← Previous
+//           </Text>
+//         </TouchableOpacity>
+
+//         <View style={styles.paginationInfo}>
+//           <Text style={styles.paginationText}>
+//             Page {currentPage} of {totalPages}
+//           </Text>
+//           <Text style={styles.paginationSubtext}>
+//             ({displayedCustomers.length} of {filtered.length})
+//           </Text>
+//         </View>
+
+//         <TouchableOpacity
+//           style={[styles.paginationButton, !hasNext && styles.paginationButtonDisabled]}
+//           onPress={handleNextPage}
+//           disabled={!hasNext || loadingMore}
+//         >
+//           {loadingMore ? (
+//             <ActivityIndicator size="small" color="#007bff" />
+//           ) : (
+//             <Text style={[styles.paginationButtonText, !hasNext && styles.paginationButtonTextDisabled]}>
+//               Next →
+//             </Text>
+//           )}
+//         </TouchableOpacity>
+//       </View>
+//     );
+//   };
+
+//   if (!authChecked) {
+//     return (
+//       <View style={styles.container}>
+//         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+//         <View style={styles.loadingContainer}>
+//           <ActivityIndicator size="large" color="#007bff" />
+//           <Text style={styles.loadingText}>Checking authentication...</Text>
+//         </View>
+//       </View>
+//     );
+//   }
+
+//   const currentFilterLabel = FILTER_OPTIONS.find(opt => opt.value === selectedFilter)?.label || 'All Records';
+//   const filteredTotal = applyFiltersToAllData().length;
+
+//   return (
+//     <View style={styles.container}>
+//       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
+//       <View style={styles.header}>
+//         <View style={styles.headerContent}>
+//           <View style={styles.titleContainer}>
+//             <Text style={styles.headerIcon}>👥</Text>
+//             <View>
+//               <Text style={styles.headerTitle}>Customers</Text>
+//               <Text style={styles.headerSubtitle}>
+//                 {displayedCustomers.length} of {filteredTotal} {filteredTotal !== totalCount ? `(${totalCount} total)` : ''}
+//               </Text>
+//             </View>
+//           </View>
+//           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+//             <Text style={styles.logoutIcon}>↗️</Text>
+//           </TouchableOpacity>
+//         </View>
+//       </View>
+
+//       {/* Combined Search and Filter Row */}
+//       <View style={styles.searchAndFilterContainer}>
+//         <View style={styles.searchInputContainer}>
+//           <Text style={styles.searchIcon}>🔍</Text>
+//           <TextInput
+//             style={styles.searchInput}
+//             placeholder="Search customers..."
+//             placeholderTextColor="#999"
+//             value={searchQuery}
+//             onChangeText={setSearchQuery}
+//             autoCapitalize="none"
+//             autoCorrect={false}
+//           />
+//           {searchQuery.length > 0 && (
+//             <TouchableOpacity
+//               style={styles.clearSearchButton}
+//               onPress={() => setSearchQuery("")}
+//             >
+//               <Text style={styles.clearSearchText}>✕</Text>
+//             </TouchableOpacity>
+//           )}
+//         </View>
+
+//         <TouchableOpacity
+//           style={styles.filterButtonCompact}
+//           onPress={() => setShowFilterModal(true)}
+//         >
+//           <Text style={styles.filterIconCompact}>⚙️</Text>
+//         </TouchableOpacity>
+//       </View>
+
+//       <Modal
+//         visible={showFilterModal}
+//         transparent={true}
+//         animationType="fade"
+//         onRequestClose={() => setShowFilterModal(false)}
+//       >
+//         <TouchableOpacity
+//           style={styles.modalOverlay}
+//           activeOpacity={1}
+//           onPress={() => setShowFilterModal(false)}
+//         >
+//           <View style={styles.modalContent}>
+//             <View style={styles.modalHeader}>
+//               <Text style={styles.modalTitle}>Filter by Time Period</Text>
+//               <TouchableOpacity onPress={() => setShowFilterModal(false)}>
+//                 <Text style={styles.modalCloseButton}>✕</Text>
+//               </TouchableOpacity>
+//             </View>
+            
+//             {FILTER_OPTIONS.map((option) => (
+//               <TouchableOpacity
+//                 key={option.value}
+//                 style={[
+//                   styles.filterOption,
+//                   selectedFilter === option.value && styles.filterOptionSelected
+//                 ]}
+//                 onPress={() => handleFilterSelect(option.value)}
+//               >
+//                 <Text style={[
+//                   styles.filterOptionText,
+//                   selectedFilter === option.value && styles.filterOptionTextSelected
+//                 ]}>
+//                   {option.label}
+//                 </Text>
+//                 {selectedFilter === option.value && (
+//                   <Text style={styles.filterOptionCheck}>✓</Text>
+//                 )}
+//               </TouchableOpacity>
+//             ))}
+//           </View>
+//         </TouchableOpacity>
+//       </Modal>
+
+//       {loading ? (
+//         <View style={styles.loadingContainer}>
+//           <ActivityIndicator size="large" color="#007bff" />
+//           <Text style={styles.loadingText}>Loading customers...</Text>
+//         </View>
+//       ) : displayedCustomers.length === 0 ? (
+//         renderEmptyState()
+//       ) : (
+//         <FlatList
+//           data={displayedCustomers}
+//           keyExtractor={(item) => item.id || Math.random().toString()}
+//           renderItem={renderCustomerCard}
+//           contentContainerStyle={styles.listContainer}
+//           ListFooterComponent={renderPaginationButtons}
+//           refreshControl={
+//             <RefreshControl 
+//               refreshing={refreshing} 
+//               onRefresh={onRefresh}
+//               colors={['#007bff']}
+//               tintColor="#007bff"
+//             />
+//           }
+//           showsVerticalScrollIndicator={false}
+//           removeClippedSubviews={true}
+//           maxToRenderPerBatch={10}
+//           windowSize={10}
+//           initialNumToRender={10}
+//         />
+//       )}
+
+//       {!loading && (
+//         <TouchableOpacity
+//           style={styles.floatingAddButton}
+//           onPress={() => navigation.navigate("AddCustomer")}
+//           activeOpacity={0.8}
+//         >
+//           <Text style={styles.floatingAddButtonText}>+</Text>
+//         </TouchableOpacity>
+//       )}
+//     </View>
+//   );
+// }
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -48,12 +764,12 @@ interface FilterOption {
 }
 
 const FILTER_OPTIONS: FilterOption[] = [
-  { label: 'All Records', value: 'all', days: null },
-  { label: 'Last 15 Days', value: '15days', days: 15 },
-  { label: 'Last 1 Month', value: '1month', days: 30 },
-  { label: 'Last 6 Months', value: '6months', days: 180 },
-  { label: 'Last 1 Year', value: '1year', days: 365 },
-  { label: 'Last 2 Years', value: '2years', days: 730 },
+  { label: 'सर्व नोंदी', value: 'all', days: null },
+  { label: 'गेले १५ दिवस', value: '15days', days: 15 },
+  { label: 'गेला १ महिना', value: '1month', days: 30 },
+  { label: 'गेले ६ महिने', value: '6months', days: 180 },
+  { label: 'गेले १ वर्ष', value: '1year', days: 365 },
+  { label: 'गेली २ वर्षे', value: '2years', days: 730 },
 ];
 
 const PAGE_SIZE = 10;
@@ -135,7 +851,7 @@ export default function HomeScreen({ navigation }: Props) {
       } catch (error) {
         console.error("Error setting up Firestore listener:", error);
         setLoading(false);
-        Alert.alert("Error", "Failed to initialize data connection");
+        Alert.alert("त्रुटी", "डेटा कनेक्शन सुरू करण्यात अयशस्वी");
       }
     });
 
@@ -165,7 +881,7 @@ export default function HomeScreen({ navigation }: Props) {
       console.error("Error fetching first page:", error);
       setLoading(false);
       setRefreshing(false);
-      Alert.alert("Error", "Failed to load customers");
+      Alert.alert("त्रुटी", "ग्राहक लोड करण्यात अयशस्वी");
     }
   };
 
@@ -218,7 +934,7 @@ export default function HomeScreen({ navigation }: Props) {
     } catch (error) {
       console.error("Error loading next page:", error);
       setLoadingMore(false);
-      Alert.alert("Error", "Failed to load next page");
+      Alert.alert("त्रुटी", "पुढील पान लोड करण्यात अयशस्वी");
     }
   };
 
@@ -239,7 +955,7 @@ export default function HomeScreen({ navigation }: Props) {
     } catch (error) {
       console.error("Error loading previous page:", error);
       setLoadingMore(false);
-      Alert.alert("Error", "Failed to load previous page");
+      Alert.alert("त्रुटी", "मागील पान लोड करण्यात अयशस्वी");
     }
   };
 
@@ -253,38 +969,38 @@ export default function HomeScreen({ navigation }: Props) {
     switch (error.code) {
       case 'permission-denied':
         Alert.alert(
-          "Permission Denied",
-          "You don't have permission to access the customer data.",
+          "परवानगी नाकारली",
+          "तुम्हाला ग्राहक डेटा ऍक्सेस करण्याची परवानगी नाही.",
           [
-            { text: "Retry", onPress: () => setLoading(true) },
-            { text: "Logout", onPress: handleLogout }
+            { text: "पुन्हा प्रयत्न करा", onPress: () => setLoading(true) },
+            { text: "लॉगआउट", onPress: handleLogout }
           ]
         );
         break;
       
       case 'unauthenticated':
         Alert.alert(
-          "Authentication Required",
-          "Please log in again to continue.",
-          [{ text: "OK", onPress: () => navigation.replace("Login") }]
+          "प्रमाणीकरण आवश्यक",
+          "सुरू ठेवण्यासाठी कृपया पुन्हा लॉग इन करा.",
+          [{ text: "ठीक आहे", onPress: () => navigation.replace("Login") }]
         );
         break;
       
       case 'unavailable':
         Alert.alert(
-          "Service Unavailable",
-          "Unable to connect to the database. Please check your internet connection.",
-          [{ text: "Retry", onPress: () => setLoading(true) }]
+          "सेवा उपलब्ध नाही",
+          "डेटाबेसशी कनेक्ट करू शकत नाही. कृपया आपले इंटरनेट कनेक्शन तपासा.",
+          [{ text: "पुन्हा प्रयत्न करा", onPress: () => setLoading(true) }]
         );
         break;
       
       default:
         Alert.alert(
-          "Error Loading Data",
-          `Failed to load customers: ${error.message}`,
+          "डेटा लोड करण्यात त्रुटी",
+          `ग्राहक लोड करण्यात अयशस्वी: ${error.message}`,
           [
-            { text: "Retry", onPress: () => setLoading(true) },
-            { text: "Logout", onPress: handleLogout }
+            { text: "पुन्हा प्रयत्न करा", onPress: () => setLoading(true) },
+            { text: "लॉगआउट", onPress: handleLogout }
           ]
         );
     }
@@ -303,12 +1019,12 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleLogout = async () => {
     Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
+      "लॉगआउट",
+      "तुम्हाला खात्रीपूर्वक लॉगआउट करायचे आहे का?",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "रद्द करा", style: "cancel" },
         {
-          text: "Logout",
+          text: "लॉगआउट",
           style: "destructive",
           onPress: async () => {
             try {
@@ -317,7 +1033,7 @@ export default function HomeScreen({ navigation }: Props) {
               navigation.replace("Login");
             } catch (error) {
               console.error("Logout error:", error);
-              Alert.alert("Error", "Failed to logout. Please try again.");
+              Alert.alert("त्रुटी", "लॉगआउट करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.");
             }
           }
         }
@@ -327,21 +1043,21 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleDeleteCustomer = async (customerId: string, customerName: string) => {
     Alert.alert(
-      "Delete Customer",
-      `Are you sure you want to delete ${customerName}? This action cannot be undone.`,
+      "ग्राहक हटवा",
+      `तुम्हाला खात्रीपूर्वक ${customerName} हटवायचे आहे का? ही क्रिया पूर्ववत करता येणार नाही.`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "रद्द करा", style: "cancel" },
         {
-          text: "Delete",
+          text: "हटवा",
           style: "destructive",
           onPress: async () => {
             try {
               setDeletingId(customerId);
               await deleteDoc(doc(db, "customers", customerId));
-              Alert.alert("Success", `${customerName} has been deleted successfully.`);
+              Alert.alert("यशस्वी", `${customerName} यशस्वीरित्या हटवले गेले आहे.`);
             } catch (error) {
               console.error("Delete error:", error);
-              Alert.alert("Error", "Failed to delete customer. Please try again.");
+              Alert.alert("त्रुटी", "ग्राहक हटवण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.");
             } finally {
               setDeletingId(null);
             }
@@ -357,21 +1073,21 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleCallCustomer = (phone: string) => {
     if (!phone) {
-      Alert.alert("Error", "No phone number available");
+      Alert.alert("त्रुटी", "फोन नंबर उपलब्ध नाही");
       return;
     }
 
     Alert.alert(
-      "Call Customer",
-      `Call ${phone}?`,
+      "ग्राहकाला कॉल करा",
+      `${phone} वर कॉल करायचा का?`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "रद्द करा", style: "cancel" },
         {
-          text: "Call",
+          text: "कॉल करा",
           onPress: () => {
             Linking.openURL(`tel:${phone}`).catch((error) => {
               console.error("Failed to make call:", error);
-              Alert.alert("Error", "Unable to make phone call");
+              Alert.alert("त्रुटी", "फोन कॉल करू शकत नाही");
             });
           }
         }
@@ -381,21 +1097,21 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleMessageCustomer = (phone: string) => {
     if (!phone) {
-      Alert.alert("Error", "No phone number available");
+      Alert.alert("त्रुटी", "फोन नंबर उपलब्ध नाही");
       return;
     }
 
     Alert.alert(
-      "Send Message",
-      `Send SMS to ${phone}?`,
+      "संदेश पाठवा",
+      `${phone} वर एसएमएस पाठवायचा का?`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "रद्द करा", style: "cancel" },
         {
-          text: "Message",
+          text: "संदेश पाठवा",
           onPress: () => {
             Linking.openURL(`sms:${phone}`).catch((error) => {
               console.error("Failed to send message:", error);
-              Alert.alert("Error", "Unable to send message");
+              Alert.alert("त्रुटी", "संदेश पाठवू शकत नाही");
             });
           }
         }
@@ -422,7 +1138,7 @@ export default function HomeScreen({ navigation }: Props) {
         
         <View style={styles.customerInfo}>
           <View style={styles.nameRow}>
-            <Text style={styles.customerName} numberOfLines={1}>{item.name || "No Name"}</Text>
+            <Text style={styles.customerName} numberOfLines={1}>{item.name || "नाव नाही"}</Text>
             {item.notifyDate && (
               <View style={styles.reminderBadge}>
                 <Text style={styles.reminderText}>!</Text>
@@ -433,12 +1149,12 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.detailsRow}>
             <TouchableOpacity onPress={() => handleCallCustomer(item.phone)} style={styles.phoneContainer}>
               <Text style={styles.infoIcon}>📞</Text>
-              <Text style={styles.customerPhone} numberOfLines={1}>{item.phone || "No Phone"}</Text>
+              <Text style={styles.customerPhone} numberOfLines={1}>{item.phone || "फोन नाही"}</Text>
             </TouchableOpacity>
             
             <View style={styles.addressContainer}>
               <Text style={styles.infoIcon}>📍</Text>
-              <Text style={styles.customerAddress} numberOfLines={1}>{item.address || "No Address"}</Text>
+              <Text style={styles.customerAddress} numberOfLines={1}>{item.address || "पत्ता नाही"}</Text>
             </View>
           </View>
           
@@ -446,7 +1162,7 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={styles.reminderRow}>
               <Text style={styles.infoIcon}>🔔</Text>
               <Text style={styles.notificationDate} numberOfLines={1}>
-                {new Date(item.notifyDate).toLocaleDateString()}
+                {new Date(item.notifyDate).toLocaleDateString('mr-IN')}
               </Text>
             </View>
           )}
@@ -494,12 +1210,12 @@ export default function HomeScreen({ navigation }: Props) {
     <View style={styles.emptyState}>
       <Text style={styles.emptyStateIcon}>👥</Text>
       <Text style={styles.emptyStateTitle}>
-        {searchQuery || selectedFilter !== 'all' ? "No customers found" : "No Customers Yet"}
+        {searchQuery || selectedFilter !== 'all' ? "ग्राहक आढळले नाहीत" : "अद्याप कोणतेही ग्राहक नाहीत"}
       </Text>
       <Text style={styles.emptyStateDescription}>
         {searchQuery || selectedFilter !== 'all'
-          ? `No customers match your filters`
-          : "Start by adding your first customer to build your customer base"
+          ? `तुमच्या फिल्टरशी कोणताही ग्राहक जुळत नाही`
+          : "तुमचा ग्राहक आधार तयार करण्यासाठी पहिला ग्राहक जोडून सुरुवात करा"
         }
       </Text>
       {!searchQuery && selectedFilter === 'all' && (
@@ -507,7 +1223,7 @@ export default function HomeScreen({ navigation }: Props) {
           style={styles.addFirstCustomerButton}
           onPress={() => navigation.navigate("AddCustomer")}
         >
-          <Text style={styles.addFirstCustomerButtonText}>Add First Customer</Text>
+          <Text style={styles.addFirstCustomerButtonText}>पहिला ग्राहक जोडा</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -532,16 +1248,16 @@ export default function HomeScreen({ navigation }: Props) {
           disabled={!hasPrevious || loadingMore}
         >
           <Text style={[styles.paginationButtonText, !hasPrevious && styles.paginationButtonTextDisabled]}>
-            ← Previous
+            ← मागील
           </Text>
         </TouchableOpacity>
 
         <View style={styles.paginationInfo}>
           <Text style={styles.paginationText}>
-            Page {currentPage} of {totalPages}
+            पान {currentPage} च्या {totalPages}
           </Text>
           <Text style={styles.paginationSubtext}>
-            ({displayedCustomers.length} of {filtered.length})
+            ({displayedCustomers.length} पैकी {filtered.length})
           </Text>
         </View>
 
@@ -554,7 +1270,7 @@ export default function HomeScreen({ navigation }: Props) {
             <ActivityIndicator size="small" color="#007bff" />
           ) : (
             <Text style={[styles.paginationButtonText, !hasNext && styles.paginationButtonTextDisabled]}>
-              Next →
+              पुढील →
             </Text>
           )}
         </TouchableOpacity>
@@ -568,13 +1284,13 @@ export default function HomeScreen({ navigation }: Props) {
         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007bff" />
-          <Text style={styles.loadingText}>Checking authentication...</Text>
+          <Text style={styles.loadingText}>प्रमाणीकरण तपासत आहे...</Text>
         </View>
       </View>
     );
   }
 
-  const currentFilterLabel = FILTER_OPTIONS.find(opt => opt.value === selectedFilter)?.label || 'All Records';
+  const currentFilterLabel = FILTER_OPTIONS.find(opt => opt.value === selectedFilter)?.label || 'सर्व नोंदी';
   const filteredTotal = applyFiltersToAllData().length;
 
   return (
@@ -586,9 +1302,9 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.titleContainer}>
             <Text style={styles.headerIcon}>👥</Text>
             <View>
-              <Text style={styles.headerTitle}>Customers</Text>
+              <Text style={styles.headerTitle}>ग्राहक</Text>
               <Text style={styles.headerSubtitle}>
-                {displayedCustomers.length} of {filteredTotal} {filteredTotal !== totalCount ? `(${totalCount} total)` : ''}
+                {displayedCustomers.length} पैकी {filteredTotal} {filteredTotal !== totalCount ? `(${totalCount} एकूण)` : ''}
               </Text>
             </View>
           </View>
@@ -604,7 +1320,7 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search customers..."
+            placeholder="ग्राहक शोधा..."
             placeholderTextColor="#999"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -642,7 +1358,7 @@ export default function HomeScreen({ navigation }: Props) {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter by Time Period</Text>
+              <Text style={styles.modalTitle}>कालावधीनुसार फिल्टर करा</Text>
               <TouchableOpacity onPress={() => setShowFilterModal(false)}>
                 <Text style={styles.modalCloseButton}>✕</Text>
               </TouchableOpacity>
@@ -675,7 +1391,7 @@ export default function HomeScreen({ navigation }: Props) {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007bff" />
-          <Text style={styles.loadingText}>Loading customers...</Text>
+          <Text style={styles.loadingText}>ग्राहक लोड करत आहे...</Text>
         </View>
       ) : displayedCustomers.length === 0 ? (
         renderEmptyState()
@@ -714,7 +1430,6 @@ export default function HomeScreen({ navigation }: Props) {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,

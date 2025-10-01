@@ -1,5 +1,6 @@
 // types.ts
 export interface Customer {
+  messageType: string;
   notificationMethod: string;
   id: string;
   name: string;
