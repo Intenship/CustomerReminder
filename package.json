@@ -22,6 +22,7 @@
     "expo-notifications": "~0.32.11",
     "expo-sms": "~14.0.7",
     "expo-status-bar": "~3.0.8",
+    "expo-updates": "~29.0.11",
     "firebase": "^12.3.0",
     "formik": "^2.4.6",
     "react": "19.1.0",
