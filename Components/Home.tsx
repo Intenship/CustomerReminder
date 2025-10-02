@@ -1441,9 +1441,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  // languageToggle: {
+  //   paddingHorizontal: 8,
+  //   paddingVertical: 4,
+  // },
   languageToggle: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   checkboxContainer: {
     flexDirection: "row",
@@ -1474,11 +1482,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   header: {
-    backgroundColor: "#fff",
+    backgroundColor: "#81868bff",
     paddingTop: Platform.OS === 'ios' ? 45 : 15,
     paddingBottom: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: "#e1e5e9",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -1502,11 +1510,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1a1a1a",
+    color: "#fff",
   },
   headerSubtitle: {
     fontSize: 12,
-    color: "#666",
+    color: "#fff",
     marginTop: 1,
   },
   logoutButton: {

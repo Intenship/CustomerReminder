@@ -111,7 +111,7 @@
 //   // NEW: Open maps app with navigation
 //   const openMapsApp = (address: string) => {
 //     const encodedAddress = encodeURIComponent(address);
-    
+
 //     // Try different map apps based on platform
 //     const mapUrls: string[] = Platform.select({
 //       ios: [
@@ -151,7 +151,7 @@
 //     tryOpenMaps(mapUrls).then((success) => {
 //       if (!success) {
 //         Alert.alert(
-//           "Error", 
+//           "Error",
 //           "Unable to open maps application. Please check if you have a maps app installed."
 //         );
 //       }
@@ -190,7 +190,7 @@
 //               setDeleting(true);
 //               await deleteDoc(doc(db, "customers", customer.id));
 //               Alert.alert(
-//                 "Success", 
+//                 "Success",
 //                 `${customer.name} has been deleted successfully.`,
 //                 [{ text: "OK", onPress: () => navigation.goBack() }]
 //               );
@@ -229,7 +229,7 @@
 //   return (
 //     <View style={styles.container}>
 //       <StatusBar barStyle="light-content" backgroundColor="#007bff" />
-      
+
 //       {/* Header */}
 //       <View style={styles.header}>
 //         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -246,8 +246,8 @@
 //         <View style={styles.profileSection}>
 //           <View style={styles.profileImageContainer}>
 //             {customer.photoURL ? (
-//               <Image 
-//                 source={{ uri: customer.photoURL }} 
+//               <Image
+//                 source={{ uri: customer.photoURL }}
 //                 style={styles.profileImage}
 //                 onError={(error) => console.log("Image load error:", error)}
 //               />
@@ -259,12 +259,12 @@
 //               </View>
 //             )}
 //           </View>
-          
+
 //           <Text style={styles.customerName}>{customer.name || "Unnamed Customer"}</Text>
 //           <Text style={styles.customerSince}>
 //             Customer since {formatCreatedDate(customer.createdAt)}
 //           </Text>
-          
+
 //           {customer.notifyDate && (
 //             <View style={styles.reminderBadge}>
 //               <Text style={styles.reminderIcon}>🔔</Text>
@@ -280,15 +280,15 @@
 //             <Text style={styles.actionTitle}>Call</Text>
 //             <Text style={styles.actionSubtitle}>Make a call</Text>
 //           </TouchableOpacity>
-          
+
 //           <TouchableOpacity style={[styles.actionCard, styles.messageAction]} onPress={handleMessage}>
 //             <Text style={styles.actionIcon}>💬</Text>
 //             <Text style={styles.actionTitle}>Message</Text>
 //             <Text style={styles.actionSubtitle}>Send SMS</Text>
 //           </TouchableOpacity>
-          
-//           <TouchableOpacity 
-//             style={[styles.actionCard, styles.navigateAction]} 
+
+//           <TouchableOpacity
+//             style={[styles.actionCard, styles.navigateAction]}
 //             onPress={handleNavigate}
 //             disabled={!customer.address}
 //           >
@@ -296,7 +296,7 @@
 //             <Text style={styles.actionTitle}>Navigate</Text>
 //             <Text style={styles.actionSubtitle}>Open maps</Text>
 //           </TouchableOpacity>
-          
+
 //           <TouchableOpacity style={[styles.actionCard, styles.editAction]} onPress={handleEdit}>
 //             <Text style={styles.actionIcon}>✏️</Text>
 //             <Text style={styles.actionTitle}>Edit</Text>
@@ -307,7 +307,7 @@
 //         {/* Contact Information */}
 //         <View style={styles.section}>
 //           <Text style={styles.sectionTitle}>Contact Information</Text>
-          
+
 //           <View style={styles.infoCard}>
 //             <View style={styles.infoItem}>
 //               <View style={styles.infoIcon}>
@@ -342,7 +342,7 @@
 //                 {/* UPDATED: Made address clickable for navigation */}
 //                 <TouchableOpacity onPress={handleNavigate} disabled={!customer.address}>
 //                   <Text style={[
-//                     styles.infoValue, 
+//                     styles.infoValue,
 //                     customer.address ? styles.addressValue : null
 //                   ]}>
 //                     {customer.address || "Not provided"}
@@ -357,7 +357,7 @@
 //         {(customer.notifyDate || customer.customMessage) && (
 //           <View style={styles.section}>
 //             <Text style={styles.sectionTitle}>Reminder Details</Text>
-            
+
 //             <View style={styles.infoCard}>
 //               {customer.notifyDate && (
 //                 <View style={styles.infoItem}>
@@ -378,7 +378,7 @@
 //                 <View style={styles.infoContent}>
 //                   {/* <Text style={styles.infoLabel}>Notification Method</Text>
 //                   <Text style={styles.infoValue}>
-//                     {customer.notificationMethod === 'sms' ? 'SMS' : 
+//                     {customer.notificationMethod === 'sms' ? 'SMS' :
 //                      customer.notificationMethod === 'email' ? 'Email' : 'SMS'}
 //                   </Text> */}
 //                 </View>
@@ -402,7 +402,7 @@
 //         {/* Account Information */}
 //         <View style={styles.section}>
 //           <Text style={styles.sectionTitle}>Account Information</Text>
-          
+
 //           <View style={styles.infoCard}>
 //             <View style={styles.infoItem}>
 //               <View style={styles.infoIcon}>
@@ -429,9 +429,9 @@
 //         {/* Danger Zone */}
 //         <View style={styles.section}>
 //           <Text style={styles.sectionTitle}>Actions</Text>
-          
-//           <TouchableOpacity 
-//             style={styles.deleteButton} 
+
+//           <TouchableOpacity
+//             style={styles.deleteButton}
 //             onPress={handleDelete}
 //             disabled={deleting}
 //           >
@@ -757,7 +757,10 @@ import { RootStackParamList, Customer } from "../types";
 import { db } from "../firebaseConfig";
 import { doc, deleteDoc } from "firebase/firestore";
 
-type ViewCustomerNavProp = NativeStackNavigationProp<RootStackParamList, "ViewCustomer">;
+type ViewCustomerNavProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ViewCustomer"
+>;
 type ViewCustomerRouteProp = RouteProp<RootStackParamList, "ViewCustomer">;
 
 type Props = {
@@ -808,7 +811,8 @@ const translations = {
     noAddress: "No address available for navigation",
     unableToCall: "Unable to make phone call",
     unableToMessage: "Unable to send message",
-    unableToMaps: "Unable to open maps application. Please check if you have a maps app installed.",
+    unableToMaps:
+      "Unable to open maps application. Please check if you have a maps app installed.",
     deleteConfirm: "Are you sure you want to delete",
     success: "Success",
     deletedSuccessfully: "has been deleted successfully.",
@@ -817,8 +821,7 @@ const translations = {
     unknown: "Unknown",
     unnamedCustomer: "Unnamed Customer",
     marathi: "मराठी",
-        language: 'English',
-
+    language: "English",
   },
   mr: {
     customerDetails: "ग्राहक तपशील",
@@ -861,7 +864,8 @@ const translations = {
     noAddress: "नेव्हिगेशनसाठी पत्ता उपलब्ध नाही",
     unableToCall: "फोन कॉल करू शकत नाही",
     unableToMessage: "संदेश पाठवू शकत नाही",
-    unableToMaps: "नकाशा अॅप्लिकेशन उघडू शकत नाही. कृपया तुमच्याकडे नकाशा अॅप इन्स्टॉल आहे का तपासा.",
+    unableToMaps:
+      "नकाशा अॅप्लिकेशन उघडू शकत नाही. कृपया तुमच्याकडे नकाशा अॅप इन्स्टॉल आहे का तपासा.",
     deleteConfirm: "तुम्हाला नक्की हटवायचे आहे का",
     success: "यशस्वी",
     deletedSuccessfully: "यशस्वीरित्या हटवले गेले.",
@@ -870,7 +874,7 @@ const translations = {
     unknown: "अज्ञात",
     unnamedCustomer: "नाव नसलेला ग्राहक",
     marathi: "मराठी",
-         language: 'मराठी',
+    language: "मराठी",
   },
 };
 
@@ -917,8 +921,8 @@ export default function ViewCustomerScreen({ navigation, route }: Props) {
               console.error("Failed to make call:", error);
               Alert.alert(t.error, t.unableToCall);
             });
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -941,8 +945,8 @@ export default function ViewCustomerScreen({ navigation, route }: Props) {
               console.error("Failed to send message:", error);
               Alert.alert(t.error, t.unableToMessage);
             });
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -962,32 +966,28 @@ export default function ViewCustomerScreen({ navigation, route }: Props) {
           text: t.navigate,
           onPress: () => {
             openMapsApp(customer.address);
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   const openMapsApp = (address: string) => {
     const encodedAddress = encodeURIComponent(address);
-    
+
     const mapUrls: string[] = Platform.select({
       ios: [
         `maps:0,0?q=${encodedAddress}`,
         `comgooglemaps://?daddr=${encodedAddress}&directionsmode=driving`,
-        `https://maps.google.com/maps?daddr=${encodedAddress}&amp;ll=`
+        `https://maps.google.com/maps?daddr=${encodedAddress}&amp;ll=`,
       ],
       android: [
         `google.navigation:q=${encodedAddress}`,
         `geo:0,0?q=${encodedAddress}`,
-        `https://maps.google.com/maps?daddr=${encodedAddress}&amp;ll=`
+        `https://maps.google.com/maps?daddr=${encodedAddress}&amp;ll=`,
       ],
-      default: [
-        `https://maps.google.com/maps?daddr=${encodedAddress}&amp;ll=`
-      ]
-    }) || [
-      `https://maps.google.com/maps?daddr=${encodedAddress}&amp;ll=`
-    ];
+      default: [`https://maps.google.com/maps?daddr=${encodedAddress}&amp;ll=`],
+    }) || [`https://maps.google.com/maps?daddr=${encodedAddress}&amp;ll=`];
 
     const tryOpenMaps = async (urls: string[]) => {
       for (const url of urls) {
@@ -1018,8 +1018,14 @@ export default function ViewCustomerScreen({ navigation, route }: Props) {
 ${t.fullName}: ${customer.name}
 ${t.phoneNumber}: ${customer.phone || t.notProvided}
 ${t.address}: ${customer.address || t.notProvided}
-${customer.notifyDate ? `${t.reminderDate}: ${new Date(customer.notifyDate).toLocaleDateString()}` : ''}
-${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}`;
+${
+  customer.notifyDate
+    ? `${t.reminderDate}: ${new Date(customer.notifyDate).toLocaleDateString()}`
+    : ""
+}
+${
+  customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ""
+}`;
 
       await Share.share({
         message: shareContent,
@@ -1044,7 +1050,7 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
               setDeleting(true);
               await deleteDoc(doc(db, "customers", customer.id));
               Alert.alert(
-                t.success, 
+                t.success,
                 `${customer.name} ${t.deletedSuccessfully}`,
                 [{ text: "OK", onPress: () => navigation.goBack() }]
               );
@@ -1053,30 +1059,30 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
               Alert.alert(t.error, t.deleteFailed);
               setDeleting(false);
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   const formatDate = (date: Date | string) => {
     if (!date) return t.notSet;
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleDateString(isMarathi ? 'mr-IN' : 'en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    return dateObj.toLocaleDateString(isMarathi ? "mr-IN" : "en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   const formatCreatedDate = (date: Date | string) => {
     if (!date) return t.unknown;
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleDateString(isMarathi ? 'mr-IN' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    return dateObj.toLocaleDateString(isMarathi ? "mr-IN" : "en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -1098,20 +1104,31 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#007bff" />
-      
+
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t.customerDetails}</Text>
+
+        <TouchableOpacity
+          style={styles.checkboxContainer}
+          onPress={() => setIsMarathi(!isMarathi)}
+        >
+          <View style={[styles.checkbox, isMarathi && styles.checkboxChecked]}>
+            {isMarathi && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+
+          <Text style={styles.languageText}>{t.language}</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
           <Text style={styles.shareIcon}>↗️</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Language Toggle */}
-      <View style={styles.languageToggle}>
+      {/* <View style={styles.languageToggle}>
         <TouchableOpacity 
           style={styles.checkboxContainer}
           onPress={() => setIsMarathi(!isMarathi)}
@@ -1119,10 +1136,9 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
           <View style={[styles.checkbox, isMarathi && styles.checkboxChecked]}>
             {isMarathi && <Text style={styles.checkmark}>✓</Text>}
           </View>
-          {/* <Text style={styles.checkboxLabel}>{translations.mr.marathi}</Text> */}
            <Text style={styles.languageText}>{t.language}</Text>
         </TouchableOpacity>
-      </View>
+      </View> */}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Profile Section */}
@@ -1134,12 +1150,14 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
               </Text>
             </View>
           </View>
-          
-          <Text style={styles.customerName}>{customer.name || t.unnamedCustomer}</Text>
+
+          <Text style={styles.customerName}>
+            {customer.name || t.unnamedCustomer}
+          </Text>
           <Text style={styles.customerSince}>
             {t.customerSince} {formatCreatedDate(customer.createdAt)}
           </Text>
-          
+
           {customer.notifyDate && (
             <View style={styles.reminderBadge}>
               <Text style={styles.reminderIcon}>🔔</Text>
@@ -1154,8 +1172,10 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
             <Text style={styles.sectionTitle}>📷 {t.productImage}</Text>
             <View style={styles.purifierPhotoContainer}>
               {!imageError ? (
-                <Image 
-                  source={{ uri: (customer.photoBase64 || customer.photoURL) as string }} 
+                <Image
+                  source={{
+                    uri: (customer.photoBase64 || customer.photoURL) as string,
+                  }}
                   style={styles.purifierPhoto}
                   onError={handleImageError}
                   onLoadStart={handleImageLoadStart}
@@ -1174,20 +1194,26 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <TouchableOpacity style={[styles.actionCard, styles.callAction]} onPress={handleCall}>
+          <TouchableOpacity
+            style={[styles.actionCard, styles.callAction]}
+            onPress={handleCall}
+          >
             <Text style={styles.actionIcon}>📞</Text>
             <Text style={styles.actionTitle}>{t.call}</Text>
             <Text style={styles.actionSubtitle}>{t.makeCall}</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={[styles.actionCard, styles.messageAction]} onPress={handleMessage}>
+
+          <TouchableOpacity
+            style={[styles.actionCard, styles.messageAction]}
+            onPress={handleMessage}
+          >
             <Text style={styles.actionIcon}>💬</Text>
             <Text style={styles.actionTitle}>{t.message}</Text>
             <Text style={styles.actionSubtitle}>{t.sendSMS}</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.actionCard, styles.navigateAction]} 
+
+          <TouchableOpacity
+            style={[styles.actionCard, styles.navigateAction]}
             onPress={handleNavigate}
             disabled={!customer.address}
           >
@@ -1195,8 +1221,11 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
             <Text style={styles.actionTitle}>{t.navigate}</Text>
             <Text style={styles.actionSubtitle}>{t.openMaps}</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={[styles.actionCard, styles.editAction]} onPress={handleEdit}>
+
+          <TouchableOpacity
+            style={[styles.actionCard, styles.editAction]}
+            onPress={handleEdit}
+          >
             <Text style={styles.actionIcon}>✏️</Text>
             <Text style={styles.actionTitle}>{t.edit}</Text>
             <Text style={styles.actionSubtitle}>{t.modifyDetails}</Text>
@@ -1206,7 +1235,7 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
         {/* Contact Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t.contactInfo}</Text>
-          
+
           <View style={styles.infoCard}>
             <View style={styles.infoItem}>
               <View style={styles.infoIcon}>
@@ -1214,7 +1243,9 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
               </View>
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>{t.fullName}</Text>
-                <Text style={styles.infoValue}>{customer.name || t.notProvided}</Text>
+                <Text style={styles.infoValue}>
+                  {customer.name || t.notProvided}
+                </Text>
               </View>
             </View>
 
@@ -1238,11 +1269,16 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
               </View>
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>{t.address}</Text>
-                <TouchableOpacity onPress={handleNavigate} disabled={!customer.address}>
-                  <Text style={[
-                    styles.infoValue, 
-                    customer.address ? styles.addressValue : null
-                  ]}>
+                <TouchableOpacity
+                  onPress={handleNavigate}
+                  disabled={!customer.address}
+                >
+                  <Text
+                    style={[
+                      styles.infoValue,
+                      customer.address ? styles.addressValue : null,
+                    ]}
+                  >
                     {customer.address || t.notProvided}
                   </Text>
                 </TouchableOpacity>
@@ -1255,7 +1291,7 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
         {(customer.notifyDate || customer.customMessage) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t.reminderDetails}</Text>
-            
+
             <View style={styles.infoCard}>
               {customer.notifyDate && (
                 <View style={styles.infoItem}>
@@ -1264,7 +1300,9 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
                   </View>
                   <View style={styles.infoContent}>
                     <Text style={styles.infoLabel}>{t.reminderDate}</Text>
-                    <Text style={styles.infoValue}>{formatDate(customer.notifyDate)}</Text>
+                    <Text style={styles.infoValue}>
+                      {formatDate(customer.notifyDate)}
+                    </Text>
                   </View>
                 </View>
               )}
@@ -1276,7 +1314,9 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
                   </View>
                   <View style={styles.infoContent}>
                     <Text style={styles.infoLabel}>{t.customMessage}</Text>
-                    <Text style={styles.infoValue}>{customer.customMessage}</Text>
+                    <Text style={styles.infoValue}>
+                      {customer.customMessage}
+                    </Text>
                   </View>
                 </View>
               )}
@@ -1287,7 +1327,7 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
         {/* Account Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t.accountInfo}</Text>
-          
+
           <View style={styles.infoCard}>
             <View style={styles.infoItem}>
               <View style={styles.infoIcon}>
@@ -1295,7 +1335,9 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
               </View>
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>{t.dateAdded}</Text>
-                <Text style={styles.infoValue}>{formatDate(customer.createdAt)}</Text>
+                <Text style={styles.infoValue}>
+                  {formatDate(customer.createdAt)}
+                </Text>
               </View>
             </View>
 
@@ -1314,9 +1356,9 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
         {/* Danger Zone */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t.actions}</Text>
-          
-          <TouchableOpacity 
-            style={styles.deleteButton} 
+
+          <TouchableOpacity
+            style={styles.deleteButton}
             onPress={handleDelete}
             disabled={deleting}
           >
@@ -1325,9 +1367,7 @@ ${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}
               <Text style={styles.deleteTitle}>
                 {deleting ? t.deleting : t.deleteCustomer}
               </Text>
-              <Text style={styles.deleteSubtitle}>
-                {t.cannotUndo}
-              </Text>
+              <Text style={styles.deleteSubtitle}>{t.cannotUndo}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -1341,19 +1381,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
-     headerRightButtons: {
+  headerRightButtons: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  languageToggle: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 3,
   },
   checkbox: {
     width: 20,
@@ -1377,15 +1417,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#1a1a1a",
     fontWeight: "600",
+     marginLeft: 6, 
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingTop: Platform.OS === "ios" ? 50 : 20,
     paddingBottom: 16,
     paddingHorizontal: 20,
-    backgroundColor: "#007bff",
+    backgroundColor: "#81868bff",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1446,7 +1487,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    position: 'relative',
+    position: "relative",
   },
   profileImage: {
     width: 100,
@@ -1477,17 +1518,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   debugButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: '#007bff',
+    backgroundColor: "#007bff",
     width: 24,
     height: 24,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: "#fff",
   },
   debugText: {
     fontSize: 12,
@@ -1496,20 +1537,20 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 20,
     padding: 12,
-    backgroundColor: '#fff3cd',
+    backgroundColor: "#fff3cd",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ffc107',
+    borderColor: "#ffc107",
   },
   debugTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
-    color: '#856404',
+    color: "#856404",
   },
   debugInfo: {
     fontSize: 12,
-    color: '#856404',
+    color: "#856404",
     marginBottom: 4,
   },
   customerName: {
@@ -1659,7 +1700,7 @@ const styles = StyleSheet.create({
   infoValueSmall: {
     fontSize: 14,
     color: "#666",
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
   phoneValue: {
     color: "#007bff",
@@ -1684,7 +1725,7 @@ const styles = StyleSheet.create({
     borderColor: "#ffcdd2",
     borderLeftWidth: 4,
     borderLeftColor: "#dc3545",
-    marginBottom:18
+    marginBottom: 18,
   },
   deleteIcon: {
     fontSize: 20,
@@ -1704,46 +1745,46 @@ const styles = StyleSheet.create({
     color: "#999",
   },
   photoSection: {
-  backgroundColor: "#fff",
-  margin: 16,
-  padding: 16,
-  borderRadius: 12,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-  elevation: 3,
-},
-purifierPhotoContainer: {
-  width: "100%",
-  height: 250,
-  borderRadius: 8,
-  overflow: "hidden",
-  backgroundColor: "#f0f0f0",
-},
-purifierPhoto: {
-  width: "100%",
-  height: "100%",
-},
-photoErrorContainer: {
-  flex: 1,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "#f8f9fa",
-},
-photoErrorIcon: {
-  fontSize: 48,
-  marginBottom: 8,
-  opacity: 0.5,
-},
-photoErrorText: {
-  fontSize: 14,
-  color: "#666",
-},
-imageLoadingOverlay: {
-  ...StyleSheet.absoluteFillObject,
-  justifyContent: "center",
-  alignItems: "center",
-  backgroundColor: "rgba(255, 255, 255, 0.8)",
-},
+    backgroundColor: "#fff",
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  purifierPhotoContainer: {
+    width: "100%",
+    height: 250,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "#f0f0f0",
+  },
+  purifierPhoto: {
+    width: "100%",
+    height: "100%",
+  },
+  photoErrorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f9fa",
+  },
+  photoErrorIcon: {
+    fontSize: 48,
+    marginBottom: 8,
+    opacity: 0.5,
+  },
+  photoErrorText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  imageLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+  },
 });

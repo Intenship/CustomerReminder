@@ -2333,7 +2333,7 @@ const translations = {
     takePhoto: 'फोटो काढा',
     chooseFromGallery: 'गॅलरीमधून निवडा',
     removePhoto: 'फोटो काढा',
-    language: 'भाषा',
+    language: 'मराठी',
     marathi: 'मराठी',
   },
   english: {
@@ -2405,7 +2405,7 @@ const translations = {
     takePhoto: 'Take Photo',
     chooseFromGallery: 'Choose from Gallery',
     removePhoto: 'Remove Photo',
-    language: 'Language',
+    language: 'English',
     marathi: 'Marathi',
   },
 };
@@ -2762,7 +2762,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
             </Text>
             
             {/* Language Toggle */}
-            <View style={styles.languageToggle}>
+            {/* <View style={styles.languageToggle}>
               <Text style={styles.languageLabel}>
                 {isMarathi ? 'EN' : 'मर'}
               </Text>
@@ -2776,7 +2776,18 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
               <Text style={styles.languageLabel}>
                 {isMarathi ? 'मर' : 'EN'}
               </Text>
-            </View>
+            </View> */}
+               <TouchableOpacity 
+              style={styles.languageToggle} 
+              onPress={() => setIsMarathi(!isMarathi)}
+            >
+              <View style={styles.checkboxContainer}>
+                <View style={[styles.checkbox, isMarathi && styles.checkboxChecked]}>
+                  {isMarathi && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+                <Text style={styles.languageText}>{t.language}</Text>
+              </View>
+            </TouchableOpacity>
           </View>
           <Text style={styles.headerSubtitle}>
             {isEditing ? t.updateCustomerDetails : t.fillCustomerDetails}
@@ -3095,6 +3106,34 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
+    checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#007bff",
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: "#007bff",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  languageText: {
+    fontSize: 12,
+    color: "#1a1a1a",
+    fontWeight: "600",
+  },
   scrollContainer: {
     flex: 1,
   },
@@ -3102,7 +3141,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
-    backgroundColor: "#007bff",
+    backgroundColor: "#81868bff",
     paddingTop: 20,
     paddingBottom: 30,
     paddingHorizontal: 20,
@@ -3457,7 +3496,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
-    marginBottom: 18,
+    marginBottom: 20,
   },
   cancelButtonText: {
     fontSize: 16,
@@ -3466,11 +3505,11 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 2,
-    backgroundColor: "#007bff",
+    backgroundColor: "#81868bff",
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
-    marginBottom: 18,
+    marginBottom: 20,
   },
   saveButtonDisabled: {
     backgroundColor: "#6c757d",
