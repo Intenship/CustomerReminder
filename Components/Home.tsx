@@ -721,7 +721,6 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Image,
   ActivityIndicator,
   RefreshControl,
   Alert,
@@ -733,7 +732,7 @@ import {
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList, Customer } from "../types";
-import { db, auth, waitForAuth, isUserAuthenticated } from "../firebaseConfig";
+import { db, auth } from "../firebaseConfig";
 import { 
   collection, 
   query, 
@@ -742,11 +741,6 @@ import {
   Unsubscribe, 
   doc, 
   deleteDoc,
-  where,
-  Timestamp,
-  limit,
-  startAfter,
-  getDocs,
   QueryDocumentSnapshot,
   DocumentData
 } from "firebase/firestore";
@@ -772,6 +766,90 @@ const FILTER_OPTIONS: FilterOption[] = [
   { label: 'गेली २ वर्षे', value: '2years', days: 730 },
 ];
 
+const FILTER_OPTIONS_EN: FilterOption[] = [
+  { label: 'All Records', value: 'all', days: null },
+  { label: 'Last 15 Days', value: '15days', days: 15 },
+  { label: 'Last 1 Month', value: '1month', days: 30 },
+  { label: 'Last 6 Months', value: '6months', days: 180 },
+  { label: 'Last 1 Year', value: '1year', days: 365 },
+  { label: 'Last 2 Years', value: '2years', days: 730 },
+];
+
+const translations = {
+  marathi: {
+    customers: 'ग्राहक',
+    of: 'पैकी',
+    total: 'एकूण',
+    search: 'ग्राहक शोधा...',
+    filterByPeriod: 'कालावधीनुसार फिल्टर करा',
+    loading: 'ग्राहक लोड करत आहे...',
+    authChecking: 'प्रमाणीकरण तपासत आहे...',
+    noCustomers: 'अद्याप कोणतेही ग्राहक नाहीत',
+    noCustomersFound: 'ग्राहक आढळले नाहीत',
+    noMatch: 'तुमच्या फिल्टरशी कोणताही ग्राहक जुळत नाही',
+    buildBase: 'तुमचा ग्राहक आधार तयार करण्यासाठी पहिला ग्राहक जोडून सुरुवात करा',
+    addFirstCustomer: 'पहिला ग्राहक जोडा',
+    previous: '← मागील',
+    next: 'पुढील →',
+    page: 'पान',
+    logoutConfirm: 'तुम्हाला खात्रीपूर्वक लॉगआउट करायचे आहे का?',
+    cancel: 'रद्द करा',
+    deleteCustomer: 'ग्राहक हटवा',
+    deleteConfirm: 'तुम्हाला खात्रीपूर्वक',
+    deleteConfirm2: 'हटवायचे आहे का? ही क्रिया पूर्ववत करता येणार नाही.',
+    delete: 'हटवा',
+    success: 'यशस्वी',
+    deletedSuccess: 'यशस्वीरित्या हटवले गेले आहे.',
+    error: 'त्रुटी',
+    deleteError: 'ग्राहक हटवण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.',
+    callCustomer: 'ग्राहकाला कॉल करा',
+    callConfirm: 'वर कॉल करायचा का?',
+    call: 'कॉल करा',
+    sendMessage: 'संदेश पाठवा',
+    messageConfirm: 'वर एसएमएस पाठवायचा का?',
+    noPhone: 'फोन नंबर उपलब्ध नाही',
+    noName: 'नाव नाही',
+    noAddress: 'पत्ता नाही',
+    language: 'मराठी',
+  },
+  english: {
+    customers: 'Customers',
+    of: 'of',
+    total: 'total',
+    search: 'Search customers...',
+    filterByPeriod: 'Filter by Period',
+    loading: 'Loading customers...',
+    authChecking: 'Checking authentication...',
+    noCustomers: 'No customers yet',
+    noCustomersFound: 'No customers found',
+    noMatch: 'No customers match your filters',
+    buildBase: 'Start building your customer base by adding your first customer',
+    addFirstCustomer: 'Add First Customer',
+    previous: '← Previous',
+    next: 'Next →',
+    page: 'Page',
+    logoutConfirm: 'Are you sure you want to logout?',
+    cancel: 'Cancel',
+    deleteCustomer: 'Delete Customer',
+    deleteConfirm: 'Are you sure you want to delete',
+    deleteConfirm2: '? This action cannot be undone.',
+    delete: 'Delete',
+    success: 'Success',
+    deletedSuccess: 'has been deleted successfully.',
+    error: 'Error',
+    deleteError: 'Failed to delete customer. Please try again.',
+    callCustomer: 'Call Customer',
+    callConfirm: 'Call',
+    call: 'Call',
+    sendMessage: 'Send Message',
+    messageConfirm: 'Send SMS to',
+    noPhone: 'Phone number not available',
+    noName: 'No name',
+    noAddress: 'No address',
+    language: 'English',
+  },
+};
+
 const PAGE_SIZE = 10;
 
 export default function HomeScreen({ navigation }: Props) {
@@ -785,26 +863,24 @@ export default function HomeScreen({ navigation }: Props) {
   const [authChecked, setAuthChecked] = useState<boolean>(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
-  const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [isMarathi, setIsMarathi] = useState<boolean>(true);
 
-  // Listen to all data for count and real-time updates
+  const t = isMarathi ? translations.marathi : translations.english;
+  const filterOptions = isMarathi ? FILTER_OPTIONS : FILTER_OPTIONS_EN;
+
   useEffect(() => {
     let firestoreUnsubscribe: Unsubscribe | null = null;
 
     const authUnsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log("Auth state changed:", user ? `User: ${user.uid}` : "No user");
       setAuthChecked(true);
 
       if (!user) {
-        console.log("No authenticated user, redirecting to login");
         setLoading(false);
         navigation.replace("Login");
         return;
       }
-
-      console.log("User authenticated, setting up Firestore listener");
       
       try {
         const q = query(collection(db, "customers"), orderBy("createdAt", "desc"));
@@ -812,8 +888,6 @@ export default function HomeScreen({ navigation }: Props) {
         firestoreUnsubscribe = onSnapshot(
           q,
           (snapshot) => {
-            console.log("Firestore data received:", snapshot.docs.length, "documents");
-            
             const customerList = snapshot.docs.map((doc) => {
               const data = doc.data();
               
@@ -842,21 +916,18 @@ export default function HomeScreen({ navigation }: Props) {
             }
           },
           (error) => {
-            console.error("Firestore onSnapshot error:", error);
             setLoading(false);
             setRefreshing(false);
-            handleFirestoreError(error);
+            Alert.alert(t.error, error.message);
           }
         );
       } catch (error) {
-        console.error("Error setting up Firestore listener:", error);
         setLoading(false);
-        Alert.alert("त्रुटी", "डेटा कनेक्शन सुरू करण्यात अयशस्वी");
+        Alert.alert(t.error, "Failed to connect");
       }
     });
 
     return () => {
-      console.log("Cleaning up subscriptions");
       authUnsubscribe();
       if (firestoreUnsubscribe) {
         firestoreUnsubscribe();
@@ -864,32 +935,11 @@ export default function HomeScreen({ navigation }: Props) {
     };
   }, [navigation]);
 
-  const fetchFirstPage = async () => {
-    try {
-      setLoading(true);
-      
-      const filtered = applyFiltersToAllData();
-      
-      const firstPage = filtered.slice(0, PAGE_SIZE);
-      setDisplayedCustomers(firstPage);
-      setHasMore(filtered.length > PAGE_SIZE);
-      setLastVisible(null);
-      
-      setLoading(false);
-      setRefreshing(false);
-    } catch (error) {
-      console.error("Error fetching first page:", error);
-      setLoading(false);
-      setRefreshing(false);
-      Alert.alert("त्रुटी", "ग्राहक लोड करण्यात अयशस्वी");
-    }
-  };
-
   const applyFiltersToAllData = (): Customer[] => {
     let filtered = [...allCustomers];
     
     if (selectedFilter !== 'all') {
-      const filterOption = FILTER_OPTIONS.find(opt => opt.value === selectedFilter);
+      const filterOption = filterOptions.find(opt => opt.value === selectedFilter);
       if (filterOption && filterOption.days) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - filterOption.days);
@@ -913,12 +963,26 @@ export default function HomeScreen({ navigation }: Props) {
     return filtered;
   };
 
+  const fetchFirstPage = async () => {
+    try {
+      setLoading(true);
+      const filtered = applyFiltersToAllData();
+      const firstPage = filtered.slice(0, PAGE_SIZE);
+      setDisplayedCustomers(firstPage);
+      setHasMore(filtered.length > PAGE_SIZE);
+      setLoading(false);
+      setRefreshing(false);
+    } catch (error) {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
   const handleNextPage = async () => {
     if (loadingMore || !hasMore) return;
     
     try {
       setLoadingMore(true);
-      
       const filtered = applyFiltersToAllData();
       const currentLength = displayedCustomers.length;
       const nextPage = filtered.slice(currentLength, currentLength + PAGE_SIZE);
@@ -929,12 +993,9 @@ export default function HomeScreen({ navigation }: Props) {
       } else {
         setHasMore(false);
       }
-      
       setLoadingMore(false);
     } catch (error) {
-      console.error("Error loading next page:", error);
       setLoadingMore(false);
-      Alert.alert("त्रुटी", "पुढील पान लोड करण्यात अयशस्वी");
     }
   };
 
@@ -943,19 +1004,14 @@ export default function HomeScreen({ navigation }: Props) {
     
     try {
       setLoadingMore(true);
-      
       const newLength = Math.max(PAGE_SIZE, displayedCustomers.length - PAGE_SIZE);
       const filtered = applyFiltersToAllData();
       const newDisplayed = filtered.slice(0, newLength);
-      
       setDisplayedCustomers(newDisplayed);
       setHasMore(newLength < filtered.length);
-      
       setLoadingMore(false);
     } catch (error) {
-      console.error("Error loading previous page:", error);
       setLoadingMore(false);
-      Alert.alert("त्रुटी", "मागील पान लोड करण्यात अयशस्वी");
     }
   };
 
@@ -965,54 +1021,12 @@ export default function HomeScreen({ navigation }: Props) {
     }
   }, [selectedFilter, searchQuery]);
 
-  const handleFirestoreError = (error: any) => {
-    switch (error.code) {
-      case 'permission-denied':
-        Alert.alert(
-          "परवानगी नाकारली",
-          "तुम्हाला ग्राहक डेटा ऍक्सेस करण्याची परवानगी नाही.",
-          [
-            { text: "पुन्हा प्रयत्न करा", onPress: () => setLoading(true) },
-            { text: "लॉगआउट", onPress: handleLogout }
-          ]
-        );
-        break;
-      
-      case 'unauthenticated':
-        Alert.alert(
-          "प्रमाणीकरण आवश्यक",
-          "सुरू ठेवण्यासाठी कृपया पुन्हा लॉग इन करा.",
-          [{ text: "ठीक आहे", onPress: () => navigation.replace("Login") }]
-        );
-        break;
-      
-      case 'unavailable':
-        Alert.alert(
-          "सेवा उपलब्ध नाही",
-          "डेटाबेसशी कनेक्ट करू शकत नाही. कृपया आपले इंटरनेट कनेक्शन तपासा.",
-          [{ text: "पुन्हा प्रयत्न करा", onPress: () => setLoading(true) }]
-        );
-        break;
-      
-      default:
-        Alert.alert(
-          "डेटा लोड करण्यात त्रुटी",
-          `ग्राहक लोड करण्यात अयशस्वी: ${error.message}`,
-          [
-            { text: "पुन्हा प्रयत्न करा", onPress: () => setLoading(true) },
-            { text: "लॉगआउट", onPress: handleLogout }
-          ]
-        );
-    }
-  };
-
   const handleFilterSelect = (filterValue: FilterPeriod) => {
     setSelectedFilter(filterValue);
     setShowFilterModal(false);
   };
 
   const onRefresh = () => {
-    console.log("Refreshing data...");
     setRefreshing(true);
     fetchFirstPage();
   };
@@ -1020,20 +1034,18 @@ export default function HomeScreen({ navigation }: Props) {
   const handleLogout = async () => {
     Alert.alert(
       "लॉगआउट",
-      "तुम्हाला खात्रीपूर्वक लॉगआउट करायचे आहे का?",
+      t.logoutConfirm,
       [
-        { text: "रद्द करा", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
           text: "लॉगआउट",
           style: "destructive",
           onPress: async () => {
             try {
-              console.log("Logging out user");
               await signOut(auth);
               navigation.replace("Login");
             } catch (error) {
-              console.error("Logout error:", error);
-              Alert.alert("त्रुटी", "लॉगआउट करण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.");
+              Alert.alert(t.error, "Logout failed");
             }
           }
         }
@@ -1043,21 +1055,20 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleDeleteCustomer = async (customerId: string, customerName: string) => {
     Alert.alert(
-      "ग्राहक हटवा",
-      `तुम्हाला खात्रीपूर्वक ${customerName} हटवायचे आहे का? ही क्रिया पूर्ववत करता येणार नाही.`,
+      t.deleteCustomer,
+      `${t.deleteConfirm} ${customerName} ${t.deleteConfirm2}`,
       [
-        { text: "रद्द करा", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
-          text: "हटवा",
+          text: t.delete,
           style: "destructive",
           onPress: async () => {
             try {
               setDeletingId(customerId);
               await deleteDoc(doc(db, "customers", customerId));
-              Alert.alert("यशस्वी", `${customerName} यशस्वीरित्या हटवले गेले आहे.`);
+              Alert.alert(t.success, `${customerName} ${t.deletedSuccess}`);
             } catch (error) {
-              console.error("Delete error:", error);
-              Alert.alert("त्रुटी", "ग्राहक हटवण्यात अयशस्वी. कृपया पुन्हा प्रयत्न करा.");
+              Alert.alert(t.error, t.deleteError);
             } finally {
               setDeletingId(null);
             }
@@ -1073,21 +1084,20 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleCallCustomer = (phone: string) => {
     if (!phone) {
-      Alert.alert("त्रुटी", "फोन नंबर उपलब्ध नाही");
+      Alert.alert(t.error, t.noPhone);
       return;
     }
 
     Alert.alert(
-      "ग्राहकाला कॉल करा",
-      `${phone} वर कॉल करायचा का?`,
+      t.callCustomer,
+      `${t.callConfirm} ${phone}?`,
       [
-        { text: "रद्द करा", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
-          text: "कॉल करा",
+          text: t.call,
           onPress: () => {
-            Linking.openURL(`tel:${phone}`).catch((error) => {
-              console.error("Failed to make call:", error);
-              Alert.alert("त्रुटी", "फोन कॉल करू शकत नाही");
+            Linking.openURL(`tel:${phone}`).catch(() => {
+              Alert.alert(t.error, "Cannot make call");
             });
           }
         }
@@ -1097,21 +1107,20 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleMessageCustomer = (phone: string) => {
     if (!phone) {
-      Alert.alert("त्रुटी", "फोन नंबर उपलब्ध नाही");
+      Alert.alert(t.error, t.noPhone);
       return;
     }
 
     Alert.alert(
-      "संदेश पाठवा",
-      `${phone} वर एसएमएस पाठवायचा का?`,
+      t.sendMessage,
+      `${t.messageConfirm} ${phone}?`,
       [
-        { text: "रद्द करा", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
-          text: "संदेश पाठवा",
+          text: t.sendMessage,
           onPress: () => {
-            Linking.openURL(`sms:${phone}`).catch((error) => {
-              console.error("Failed to send message:", error);
-              Alert.alert("त्रुटी", "संदेश पाठवू शकत नाही");
+            Linking.openURL(`sms:${phone}`).catch(() => {
+              Alert.alert(t.error, "Cannot send message");
             });
           }
         }
@@ -1122,9 +1131,7 @@ export default function HomeScreen({ navigation }: Props) {
   const renderCustomerCard = ({ item }: { item: Customer }) => (
     <TouchableOpacity
       style={styles.customerCard}
-      onPress={() => {
-        navigation.navigate("ViewCustomer", { customer: item });
-      }}
+      onPress={() => navigation.navigate("ViewCustomer", { customer: item })}
       activeOpacity={0.7}
     >
       <View style={styles.cardContent}>
@@ -1138,7 +1145,7 @@ export default function HomeScreen({ navigation }: Props) {
         
         <View style={styles.customerInfo}>
           <View style={styles.nameRow}>
-            <Text style={styles.customerName} numberOfLines={1}>{item.name || "नाव नाही"}</Text>
+            <Text style={styles.customerName} numberOfLines={1}>{item.name || t.noName}</Text>
             {item.notifyDate && (
               <View style={styles.reminderBadge}>
                 <Text style={styles.reminderText}>!</Text>
@@ -1149,12 +1156,12 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.detailsRow}>
             <TouchableOpacity onPress={() => handleCallCustomer(item.phone)} style={styles.phoneContainer}>
               <Text style={styles.infoIcon}>📞</Text>
-              <Text style={styles.customerPhone} numberOfLines={1}>{item.phone || "फोन नाही"}</Text>
+              <Text style={styles.customerPhone} numberOfLines={1}>{item.phone || t.noPhone}</Text>
             </TouchableOpacity>
             
             <View style={styles.addressContainer}>
               <Text style={styles.infoIcon}>📍</Text>
-              <Text style={styles.customerAddress} numberOfLines={1}>{item.address || "पत्ता नाही"}</Text>
+              <Text style={styles.customerAddress} numberOfLines={1}>{item.address || t.noAddress}</Text>
             </View>
           </View>
           
@@ -1169,24 +1176,15 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleCallCustomer(item.phone)}
-          >
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleCallCustomer(item.phone)}>
             <Text style={styles.actionIcon}>📞</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => handleMessageCustomer(item.phone)}
-          >
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleMessageCustomer(item.phone)}>
             <Text style={styles.actionIcon}>💬</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => handleEditCustomer(item)}
-          >
+          <TouchableOpacity style={[styles.actionButton, styles.editButton]} onPress={() => handleEditCustomer(item)}>
             <Text style={styles.actionIcon}>✏️</Text>
           </TouchableOpacity>
 
@@ -1210,20 +1208,17 @@ export default function HomeScreen({ navigation }: Props) {
     <View style={styles.emptyState}>
       <Text style={styles.emptyStateIcon}>👥</Text>
       <Text style={styles.emptyStateTitle}>
-        {searchQuery || selectedFilter !== 'all' ? "ग्राहक आढळले नाहीत" : "अद्याप कोणतेही ग्राहक नाहीत"}
+        {searchQuery || selectedFilter !== 'all' ? t.noCustomersFound : t.noCustomers}
       </Text>
       <Text style={styles.emptyStateDescription}>
-        {searchQuery || selectedFilter !== 'all'
-          ? `तुमच्या फिल्टरशी कोणताही ग्राहक जुळत नाही`
-          : "तुमचा ग्राहक आधार तयार करण्यासाठी पहिला ग्राहक जोडून सुरुवात करा"
-        }
+        {searchQuery || selectedFilter !== 'all' ? t.noMatch : t.buildBase}
       </Text>
       {!searchQuery && selectedFilter === 'all' && (
         <TouchableOpacity
           style={styles.addFirstCustomerButton}
           onPress={() => navigation.navigate("AddCustomer")}
         >
-          <Text style={styles.addFirstCustomerButtonText}>पहिला ग्राहक जोडा</Text>
+          <Text style={styles.addFirstCustomerButtonText}>{t.addFirstCustomer}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -1248,16 +1243,16 @@ export default function HomeScreen({ navigation }: Props) {
           disabled={!hasPrevious || loadingMore}
         >
           <Text style={[styles.paginationButtonText, !hasPrevious && styles.paginationButtonTextDisabled]}>
-            ← मागील
+            {t.previous}
           </Text>
         </TouchableOpacity>
 
         <View style={styles.paginationInfo}>
           <Text style={styles.paginationText}>
-            पान {currentPage} च्या {totalPages}
+            {t.page} {currentPage} {t.of} {totalPages}
           </Text>
           <Text style={styles.paginationSubtext}>
-            ({displayedCustomers.length} पैकी {filtered.length})
+            ({displayedCustomers.length} {t.of} {filtered.length})
           </Text>
         </View>
 
@@ -1270,7 +1265,7 @@ export default function HomeScreen({ navigation }: Props) {
             <ActivityIndicator size="small" color="#007bff" />
           ) : (
             <Text style={[styles.paginationButtonText, !hasNext && styles.paginationButtonTextDisabled]}>
-              पुढील →
+              {t.next}
             </Text>
           )}
         </TouchableOpacity>
@@ -1284,13 +1279,12 @@ export default function HomeScreen({ navigation }: Props) {
         <StatusBar barStyle="dark-content" backgroundColor="#fff" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007bff" />
-          <Text style={styles.loadingText}>प्रमाणीकरण तपासत आहे...</Text>
+          <Text style={styles.loadingText}>{t.authChecking}</Text>
         </View>
       </View>
     );
   }
 
-  const currentFilterLabel = FILTER_OPTIONS.find(opt => opt.value === selectedFilter)?.label || 'सर्व नोंदी';
   const filteredTotal = applyFiltersToAllData().length;
 
   return (
@@ -1302,25 +1296,37 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={styles.titleContainer}>
             <Text style={styles.headerIcon}>👥</Text>
             <View>
-              <Text style={styles.headerTitle}>ग्राहक</Text>
+              <Text style={styles.headerTitle}>{t.customers}</Text>
               <Text style={styles.headerSubtitle}>
-                {displayedCustomers.length} पैकी {filteredTotal} {filteredTotal !== totalCount ? `(${totalCount} एकूण)` : ''}
+                {displayedCustomers.length} {t.of} {filteredTotal} {filteredTotal !== totalCount ? `(${totalCount} ${t.total})` : ''}
               </Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutIcon}>↗️</Text>
-          </TouchableOpacity>
+          <View style={styles.headerRightButtons}>
+            <TouchableOpacity 
+              style={styles.languageToggle} 
+              onPress={() => setIsMarathi(!isMarathi)}
+            >
+              <View style={styles.checkboxContainer}>
+                <View style={[styles.checkbox, isMarathi && styles.checkboxChecked]}>
+                  {isMarathi && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+                <Text style={styles.languageText}>{t.language}</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutIcon}>↗️</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
-      {/* Combined Search and Filter Row */}
       <View style={styles.searchAndFilterContainer}>
         <View style={styles.searchInputContainer}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="ग्राहक शोधा..."
+            placeholder={t.search}
             placeholderTextColor="#999"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -1328,19 +1334,13 @@ export default function HomeScreen({ navigation }: Props) {
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity
-              style={styles.clearSearchButton}
-              onPress={() => setSearchQuery("")}
-            >
+            <TouchableOpacity style={styles.clearSearchButton} onPress={() => setSearchQuery("")}>
               <Text style={styles.clearSearchText}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        <TouchableOpacity
-          style={styles.filterButtonCompact}
-          onPress={() => setShowFilterModal(true)}
-        >
+        <TouchableOpacity style={styles.filterButtonCompact} onPress={() => setShowFilterModal(true)}>
           <Text style={styles.filterIconCompact}>⚙️</Text>
         </TouchableOpacity>
       </View>
@@ -1358,13 +1358,13 @@ export default function HomeScreen({ navigation }: Props) {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>कालावधीनुसार फिल्टर करा</Text>
+              <Text style={styles.modalTitle}>{t.filterByPeriod}</Text>
               <TouchableOpacity onPress={() => setShowFilterModal(false)}>
                 <Text style={styles.modalCloseButton}>✕</Text>
               </TouchableOpacity>
             </View>
             
-            {FILTER_OPTIONS.map((option) => (
+            {filterOptions.map((option) => (
               <TouchableOpacity
                 key={option.value}
                 style={[
@@ -1391,7 +1391,7 @@ export default function HomeScreen({ navigation }: Props) {
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007bff" />
-          <Text style={styles.loadingText}>ग्राहक लोड करत आहे...</Text>
+          <Text style={styles.loadingText}>{t.loading}</Text>
         </View>
       ) : displayedCustomers.length === 0 ? (
         renderEmptyState()
@@ -1430,10 +1430,48 @@ export default function HomeScreen({ navigation }: Props) {
     </View>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f9fa",
+  },
+   headerRightButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  languageToggle: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#007bff",
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: "#007bff",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  languageText: {
+    fontSize: 12,
+    color: "#1a1a1a",
+    fontWeight: "600",
   },
   header: {
     backgroundColor: "#fff",
@@ -1894,3 +1932,5 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
+
+

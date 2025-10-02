@@ -736,7 +736,6 @@
 //     color: "#999",
 //   },
 // });
-
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -766,12 +765,123 @@ type Props = {
   route: ViewCustomerRouteProp;
 };
 
+// Translation object
+const translations = {
+  en: {
+    customerDetails: "Customer Details",
+    customerSince: "Customer since",
+    reminderSet: "Reminder Set",
+    productImage: "Product Image",
+    photoFailed: "Photo failed to load",
+    call: "Call",
+    makeCall: "Make a call",
+    message: "Message",
+    sendSMS: "Send SMS",
+    navigate: "Navigate",
+    openMaps: "Open maps",
+    edit: "Edit",
+    modifyDetails: "Modify details",
+    contactInfo: "Contact Information",
+    fullName: "Full Name",
+    phoneNumber: "Phone Number",
+    address: "Address",
+    notProvided: "Not provided",
+    reminderDetails: "Reminder Details",
+    reminderDate: "Reminder Date",
+    customMessage: "Custom Message",
+    accountInfo: "Account Information",
+    dateAdded: "Date Added",
+    customerId: "Customer ID",
+    actions: "Actions",
+    deleteCustomer: "Delete Customer",
+    cannotUndo: "This action cannot be undone",
+    deleting: "Deleting...",
+    callCustomer: "Call Customer",
+    callPrompt: "Call",
+    cancel: "Cancel",
+    sendMessagePrompt: "Send Message",
+    sendSMSTo: "Send SMS to",
+    navigateToCustomer: "Navigate to Customer",
+    openMapsNavigate: "Open maps and navigate to:",
+    error: "Error",
+    noPhone: "No phone number available",
+    noAddress: "No address available for navigation",
+    unableToCall: "Unable to make phone call",
+    unableToMessage: "Unable to send message",
+    unableToMaps: "Unable to open maps application. Please check if you have a maps app installed.",
+    deleteConfirm: "Are you sure you want to delete",
+    success: "Success",
+    deletedSuccessfully: "has been deleted successfully.",
+    deleteFailed: "Failed to delete customer. Please try again.",
+    notSet: "Not set",
+    unknown: "Unknown",
+    unnamedCustomer: "Unnamed Customer",
+    marathi: "मराठी",
+        language: 'English',
+
+  },
+  mr: {
+    customerDetails: "ग्राहक तपशील",
+    customerSince: "ग्राहक पासून",
+    reminderSet: "स्मरणपत्र सेट केले",
+    productImage: "उत्पादन प्रतिमा",
+    photoFailed: "फोटो लोड होऊ शकला नाही",
+    call: "कॉल करा",
+    makeCall: "कॉल करा",
+    message: "संदेश",
+    sendSMS: "SMS पाठवा",
+    navigate: "मार्ग",
+    openMaps: "नकाशा उघडा",
+    edit: "संपादित करा",
+    modifyDetails: "तपशील बदला",
+    contactInfo: "संपर्क माहिती",
+    fullName: "पूर्ण नाव",
+    phoneNumber: "फोन नंबर",
+    address: "पत्ता",
+    notProvided: "प्रदान केलेले नाही",
+    reminderDetails: "स्मरणपत्र तपशील",
+    reminderDate: "स्मरणपत्र तारीख",
+    customMessage: "सानुकूल संदेश",
+    accountInfo: "खाते माहिती",
+    dateAdded: "जोडलेली तारीख",
+    customerId: "ग्राहक आयडी",
+    actions: "क्रिया",
+    deleteCustomer: "ग्राहक हटवा",
+    cannotUndo: "ही क्रिया पूर्ववत केली जाऊ शकत नाही",
+    deleting: "हटवत आहे...",
+    callCustomer: "ग्राहकाला कॉल करा",
+    callPrompt: "कॉल करा",
+    cancel: "रद्द करा",
+    sendMessagePrompt: "संदेश पाठवा",
+    sendSMSTo: "यांना SMS पाठवा",
+    navigateToCustomer: "ग्राहकाकडे जा",
+    openMapsNavigate: "नकाशा उघडा आणि येथे जा:",
+    error: "त्रुटी",
+    noPhone: "फोन नंबर उपलब्ध नाही",
+    noAddress: "नेव्हिगेशनसाठी पत्ता उपलब्ध नाही",
+    unableToCall: "फोन कॉल करू शकत नाही",
+    unableToMessage: "संदेश पाठवू शकत नाही",
+    unableToMaps: "नकाशा अॅप्लिकेशन उघडू शकत नाही. कृपया तुमच्याकडे नकाशा अॅप इन्स्टॉल आहे का तपासा.",
+    deleteConfirm: "तुम्हाला नक्की हटवायचे आहे का",
+    success: "यशस्वी",
+    deletedSuccessfully: "यशस्वीरित्या हटवले गेले.",
+    deleteFailed: "ग्राहक हटवणे अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
+    notSet: "सेट केलेले नाही",
+    unknown: "अज्ञात",
+    unnamedCustomer: "नाव नसलेला ग्राहक",
+    marathi: "मराठी",
+         language: 'मराठी',
+  },
+};
+
 export default function ViewCustomerScreen({ navigation, route }: Props) {
   const { customer } = route.params;
   const [deleting, setDeleting] = useState<boolean>(false);
   const [imageError, setImageError] = useState<boolean>(false);
+  const [isMarathi, setIsMarathi] = useState<boolean>(true);
 
-  // Debug: Log customer data when component mounts
+  const t = isMarathi ? translations.mr : translations.en;
+
   useEffect(() => {
     console.log("=== Customer Data ===");
     console.log("Customer ID:", customer.id);
@@ -791,21 +901,21 @@ export default function ViewCustomerScreen({ navigation, route }: Props) {
 
   const handleCall = () => {
     if (!customer.phone) {
-      Alert.alert("Error", "No phone number available");
+      Alert.alert(t.error, t.noPhone);
       return;
     }
 
     Alert.alert(
-      "Call Customer",
-      `Call ${customer.name}?\n${customer.phone}`,
+      t.callCustomer,
+      `${t.callPrompt} ${customer.name}?\n${customer.phone}`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
-          text: "Call",
+          text: t.callPrompt,
           onPress: () => {
             Linking.openURL(`tel:${customer.phone}`).catch((error) => {
               console.error("Failed to make call:", error);
-              Alert.alert("Error", "Unable to make phone call");
+              Alert.alert(t.error, t.unableToCall);
             });
           }
         }
@@ -815,21 +925,21 @@ export default function ViewCustomerScreen({ navigation, route }: Props) {
 
   const handleMessage = () => {
     if (!customer.phone) {
-      Alert.alert("Error", "No phone number available");
+      Alert.alert(t.error, t.noPhone);
       return;
     }
 
     Alert.alert(
-      "Send Message",
-      `Send SMS to ${customer.name}?\n${customer.phone}`,
+      t.sendMessagePrompt,
+      `${t.sendSMSTo} ${customer.name}?\n${customer.phone}`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
-          text: "Message",
+          text: t.message,
           onPress: () => {
             Linking.openURL(`sms:${customer.phone}`).catch((error) => {
               console.error("Failed to send message:", error);
-              Alert.alert("Error", "Unable to send message");
+              Alert.alert(t.error, t.unableToMessage);
             });
           }
         }
@@ -839,17 +949,17 @@ export default function ViewCustomerScreen({ navigation, route }: Props) {
 
   const handleNavigate = () => {
     if (!customer.address) {
-      Alert.alert("Error", "No address available for navigation");
+      Alert.alert(t.error, t.noAddress);
       return;
     }
 
     Alert.alert(
-      "Navigate to Customer",
-      `Open maps and navigate to:\n${customer.address}`,
+      t.navigateToCustomer,
+      `${t.openMapsNavigate}\n${customer.address}`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
-          text: "Navigate",
+          text: t.navigate,
           onPress: () => {
             openMapsApp(customer.address);
           }
@@ -897,26 +1007,23 @@ export default function ViewCustomerScreen({ navigation, route }: Props) {
 
     tryOpenMaps(mapUrls).then((success) => {
       if (!success) {
-        Alert.alert(
-          "Error", 
-          "Unable to open maps application. Please check if you have a maps app installed."
-        );
+        Alert.alert(t.error, t.unableToMaps);
       }
     });
   };
 
   const handleShare = async () => {
     try {
-      const shareContent = `Customer Details:
-Name: ${customer.name}
-Phone: ${customer.phone || 'N/A'}
-Address: ${customer.address || 'N/A'}
-${customer.notifyDate ? `Reminder: ${new Date(customer.notifyDate).toLocaleDateString()}` : ''}
-${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
+      const shareContent = `${t.customerDetails}:
+${t.fullName}: ${customer.name}
+${t.phoneNumber}: ${customer.phone || t.notProvided}
+${t.address}: ${customer.address || t.notProvided}
+${customer.notifyDate ? `${t.reminderDate}: ${new Date(customer.notifyDate).toLocaleDateString()}` : ''}
+${customer.customMessage ? `${t.customMessage}: ${customer.customMessage}` : ''}`;
 
       await Share.share({
         message: shareContent,
-        title: `${customer.name} - Contact Details`,
+        title: `${customer.name} - ${t.contactInfo}`,
       });
     } catch (error) {
       console.error("Error sharing:", error);
@@ -925,25 +1032,25 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
 
   const handleDelete = () => {
     Alert.alert(
-      "Delete Customer",
-      `Are you sure you want to delete ${customer.name}?\n\nThis action cannot be undone.`,
+      t.deleteCustomer,
+      `${t.deleteConfirm} ${customer.name}?\n\n${t.cannotUndo}`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.cancel, style: "cancel" },
         {
-          text: "Delete",
+          text: t.deleteCustomer,
           style: "destructive",
           onPress: async () => {
             try {
               setDeleting(true);
               await deleteDoc(doc(db, "customers", customer.id));
               Alert.alert(
-                "Success", 
-                `${customer.name} has been deleted successfully.`,
+                t.success, 
+                `${customer.name} ${t.deletedSuccessfully}`,
                 [{ text: "OK", onPress: () => navigation.goBack() }]
               );
             } catch (error) {
               console.error("Delete error:", error);
-              Alert.alert("Error", "Failed to delete customer. Please try again.");
+              Alert.alert(t.error, t.deleteFailed);
               setDeleting(false);
             }
           }
@@ -953,9 +1060,9 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
   };
 
   const formatDate = (date: Date | string) => {
-    if (!date) return 'Not set';
+    if (!date) return t.notSet;
     const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleDateString('en-US', {
+    return dateObj.toLocaleDateString(isMarathi ? 'mr-IN' : 'en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -964,28 +1071,25 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
   };
 
   const formatCreatedDate = (date: Date | string) => {
-    if (!date) return 'Unknown';
+    if (!date) return t.unknown;
     const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleDateString('en-US', {
+    return dateObj.toLocaleDateString(isMarathi ? 'mr-IN' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     });
   };
 
-  // Handle image load error
   const handleImageError = (error: any) => {
     console.error("Image load error:", error);
     console.error("Photo URL that failed:", customer.photoURL);
     setImageError(true);
   };
 
-  // Handle image load start
   const handleImageLoadStart = () => {
     console.log("Image loading started for URL:", customer.photoURL);
   };
 
-  // Handle image load success
   const handleImageLoad = () => {
     console.log("Image loaded successfully:", customer.photoURL);
     setImageError(false);
@@ -1000,9 +1104,23 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
         <TouchableOpacity style={styles.backButton} onPress={handleBack}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Customer Details</Text>
+        <Text style={styles.headerTitle}>{t.customerDetails}</Text>
         <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
           <Text style={styles.shareIcon}>↗️</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Language Toggle */}
+      <View style={styles.languageToggle}>
+        <TouchableOpacity 
+          style={styles.checkboxContainer}
+          onPress={() => setIsMarathi(!isMarathi)}
+        >
+          <View style={[styles.checkbox, isMarathi && styles.checkboxChecked]}>
+            {isMarathi && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          {/* <Text style={styles.checkboxLabel}>{translations.mr.marathi}</Text> */}
+           <Text style={styles.languageText}>{t.language}</Text>
         </TouchableOpacity>
       </View>
 
@@ -1010,99 +1128,62 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
         {/* Profile Section */}
         <View style={styles.profileSection}>
           <View style={styles.profileImageContainer}>
-            {/* {(customer.photoURL || customer.photoBase64) && !imageError ? (
-              <>
-                <Image 
-                  source={{ uri: (customer.photoBase64 || customer.photoURL) as string }} 
-                  style={styles.profileImage}
-                  onError={handleImageError}
-                  onLoadStart={handleImageLoadStart}
-                  onLoad={handleImageLoad}
-                  resizeMode="cover"
-                />
-    
-                <TouchableOpacity 
-                  style={styles.debugButton}
-                  onPress={() => {
-                    const photoUri = customer.photoBase64 || customer.photoURL;
-                    Alert.alert(
-                      "Photo Debug",
-                      `Has photoBase64: ${customer.photoBase64 ? 'YES' : 'NO'}\nHas photoURL: ${customer.photoURL ? 'YES' : 'NO'}\n\nPreview: ${photoUri?.substring(0, 100)}...`,
-                      [
-                        { text: "Close" }
-                      ]
-                    );
-                  }}
-                >
-                  <Text style={styles.debugText}>ℹ️</Text>
-                </TouchableOpacity>
-              </>
-            ) : ( */}
-              <View style={styles.placeholderImage}>
-                <Text style={styles.placeholderText}>
-                  {customer.name?.charAt(0)?.toUpperCase() || "?"}
-                </Text>
-                {/* {(customer.photoURL || customer.photoBase64) && (
-                  <Text style={styles.errorText}>Photo failed to load</Text>
-                )} */}
-              </View>
-            
+            <View style={styles.placeholderImage}>
+              <Text style={styles.placeholderText}>
+                {customer.name?.charAt(0)?.toUpperCase() || "?"}
+              </Text>
+            </View>
           </View>
           
-          <Text style={styles.customerName}>{customer.name || "Unnamed Customer"}</Text>
+          <Text style={styles.customerName}>{customer.name || t.unnamedCustomer}</Text>
           <Text style={styles.customerSince}>
-            Customer since {formatCreatedDate(customer.createdAt)}
+            {t.customerSince} {formatCreatedDate(customer.createdAt)}
           </Text>
           
           {customer.notifyDate && (
             <View style={styles.reminderBadge}>
               <Text style={styles.reminderIcon}>🔔</Text>
-              <Text style={styles.reminderText}>Reminder Set</Text>
+              <Text style={styles.reminderText}>{t.reminderSet}</Text>
             </View>
           )}
         </View>
 
-       {/* Water Purifier Photo Section */}
-{(customer.photoURL || customer.photoBase64) && (
-  <View style={styles.photoSection}>
-    <Text style={styles.sectionTitle}>📷 Product Image</Text>
-    <View style={styles.purifierPhotoContainer}>
-      {!imageError ? (
-        <Image 
-          source={{ uri: (customer.photoBase64 || customer.photoURL) as string }} 
-          style={styles.purifierPhoto}
-          onError={handleImageError}
-          onLoadStart={handleImageLoadStart}
-          onLoad={handleImageLoad}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={styles.photoErrorContainer}>
-          <Text style={styles.photoErrorIcon}>📷</Text>
-          <Text style={styles.photoErrorText}>Photo failed to load</Text>
-        </View>
-      )}
-      {/* {imageLoading && (
-        <View style={styles.imageLoadingOverlay}>
-          <ActivityIndicator size="large" color="#007bff" />
-        </View>
-      )} */}
-    </View>
-  </View>
-)}
+        {/* Water Purifier Photo Section */}
+        {(customer.photoURL || customer.photoBase64) && (
+          <View style={styles.photoSection}>
+            <Text style={styles.sectionTitle}>📷 {t.productImage}</Text>
+            <View style={styles.purifierPhotoContainer}>
+              {!imageError ? (
+                <Image 
+                  source={{ uri: (customer.photoBase64 || customer.photoURL) as string }} 
+                  style={styles.purifierPhoto}
+                  onError={handleImageError}
+                  onLoadStart={handleImageLoadStart}
+                  onLoad={handleImageLoad}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.photoErrorContainer}>
+                  <Text style={styles.photoErrorIcon}>📷</Text>
+                  <Text style={styles.photoErrorText}>{t.photoFailed}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <TouchableOpacity style={[styles.actionCard, styles.callAction]} onPress={handleCall}>
             <Text style={styles.actionIcon}>📞</Text>
-            <Text style={styles.actionTitle}>Call</Text>
-            <Text style={styles.actionSubtitle}>Make a call</Text>
+            <Text style={styles.actionTitle}>{t.call}</Text>
+            <Text style={styles.actionSubtitle}>{t.makeCall}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={[styles.actionCard, styles.messageAction]} onPress={handleMessage}>
             <Text style={styles.actionIcon}>💬</Text>
-            <Text style={styles.actionTitle}>Message</Text>
-            <Text style={styles.actionSubtitle}>Send SMS</Text>
+            <Text style={styles.actionTitle}>{t.message}</Text>
+            <Text style={styles.actionSubtitle}>{t.sendSMS}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -1111,20 +1192,20 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
             disabled={!customer.address}
           >
             <Text style={styles.actionIcon}>🗺️</Text>
-            <Text style={styles.actionTitle}>Navigate</Text>
-            <Text style={styles.actionSubtitle}>Open maps</Text>
+            <Text style={styles.actionTitle}>{t.navigate}</Text>
+            <Text style={styles.actionSubtitle}>{t.openMaps}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={[styles.actionCard, styles.editAction]} onPress={handleEdit}>
             <Text style={styles.actionIcon}>✏️</Text>
-            <Text style={styles.actionTitle}>Edit</Text>
-            <Text style={styles.actionSubtitle}>Modify details</Text>
+            <Text style={styles.actionTitle}>{t.edit}</Text>
+            <Text style={styles.actionSubtitle}>{t.modifyDetails}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Contact Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Contact Information</Text>
+          <Text style={styles.sectionTitle}>{t.contactInfo}</Text>
           
           <View style={styles.infoCard}>
             <View style={styles.infoItem}>
@@ -1132,8 +1213,8 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
                 <Text style={styles.icon}>👤</Text>
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Full Name</Text>
-                <Text style={styles.infoValue}>{customer.name || "Not provided"}</Text>
+                <Text style={styles.infoLabel}>{t.fullName}</Text>
+                <Text style={styles.infoValue}>{customer.name || t.notProvided}</Text>
               </View>
             </View>
 
@@ -1142,10 +1223,10 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
                 <Text style={styles.icon}>📞</Text>
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Phone Number</Text>
+                <Text style={styles.infoLabel}>{t.phoneNumber}</Text>
                 <TouchableOpacity onPress={handleCall}>
                   <Text style={[styles.infoValue, styles.phoneValue]}>
-                    {customer.phone || "Not provided"}
+                    {customer.phone || t.notProvided}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1156,13 +1237,13 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
                 <Text style={styles.icon}>📍</Text>
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Address</Text>
+                <Text style={styles.infoLabel}>{t.address}</Text>
                 <TouchableOpacity onPress={handleNavigate} disabled={!customer.address}>
                   <Text style={[
                     styles.infoValue, 
                     customer.address ? styles.addressValue : null
                   ]}>
-                    {customer.address || "Not provided"}
+                    {customer.address || t.notProvided}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1173,7 +1254,7 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
         {/* Reminder Information */}
         {(customer.notifyDate || customer.customMessage) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Reminder Details</Text>
+            <Text style={styles.sectionTitle}>{t.reminderDetails}</Text>
             
             <View style={styles.infoCard}>
               {customer.notifyDate && (
@@ -1182,7 +1263,7 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
                     <Text style={styles.icon}>🗓️</Text>
                   </View>
                   <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Reminder Date</Text>
+                    <Text style={styles.infoLabel}>{t.reminderDate}</Text>
                     <Text style={styles.infoValue}>{formatDate(customer.notifyDate)}</Text>
                   </View>
                 </View>
@@ -1194,7 +1275,7 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
                     <Text style={styles.icon}>💭</Text>
                   </View>
                   <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Custom Message</Text>
+                    <Text style={styles.infoLabel}>{t.customMessage}</Text>
                     <Text style={styles.infoValue}>{customer.customMessage}</Text>
                   </View>
                 </View>
@@ -1205,7 +1286,7 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
 
         {/* Account Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
+          <Text style={styles.sectionTitle}>{t.accountInfo}</Text>
           
           <View style={styles.infoCard}>
             <View style={styles.infoItem}>
@@ -1213,7 +1294,7 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
                 <Text style={styles.icon}>📅</Text>
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Date Added</Text>
+                <Text style={styles.infoLabel}>{t.dateAdded}</Text>
                 <Text style={styles.infoValue}>{formatDate(customer.createdAt)}</Text>
               </View>
             </View>
@@ -1223,7 +1304,7 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
                 <Text style={styles.icon}>🆔</Text>
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Customer ID</Text>
+                <Text style={styles.infoLabel}>{t.customerId}</Text>
                 <Text style={styles.infoValueSmall}>{customer.id}</Text>
               </View>
             </View>
@@ -1232,7 +1313,7 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
 
         {/* Danger Zone */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Actions</Text>
+          <Text style={styles.sectionTitle}>{t.actions}</Text>
           
           <TouchableOpacity 
             style={styles.deleteButton} 
@@ -1242,10 +1323,10 @@ ${customer.customMessage ? `Message: ${customer.customMessage}` : ''}`;
             <Text style={styles.deleteIcon}>🗑️</Text>
             <View style={styles.deleteContent}>
               <Text style={styles.deleteTitle}>
-                {deleting ? "Deleting..." : "Delete Customer"}
+                {deleting ? t.deleting : t.deleteCustomer}
               </Text>
               <Text style={styles.deleteSubtitle}>
-                This action cannot be undone
+                {t.cannotUndo}
               </Text>
             </View>
           </TouchableOpacity>
@@ -1259,6 +1340,43 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f9fa",
+  },
+     headerRightButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  languageToggle: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#007bff",
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: "#007bff",
+  },
+  checkmark: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  languageText: {
+    fontSize: 12,
+    color: "#1a1a1a",
+    fontWeight: "600",
   },
   header: {
     flexDirection: "row",
@@ -1430,6 +1548,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
     gap: 8,
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    color: "#1a1a1a",
+    fontWeight: "500",
   },
   actionCard: {
     flex: 1,
