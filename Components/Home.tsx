@@ -1728,11 +1728,11 @@ const styles = StyleSheet.create({
   },
   actionButtons: {
     flexDirection: "row",
-    gap: 2,
+    gap: 4,
   },
   actionButton: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 30,
     borderRadius: 4,
     backgroundColor: "#f8f9fa",
     justifyContent: "center",
@@ -1741,7 +1741,7 @@ const styles = StyleSheet.create({
     borderColor: "#e1e5e9",
   },
   actionIcon: {
-    fontSize: 10,
+    fontSize: 14,
   },
   editButton: {
     backgroundColor: "#e3f2fd",
