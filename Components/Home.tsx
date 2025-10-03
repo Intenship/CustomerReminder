@@ -1315,7 +1315,7 @@ export default function HomeScreen({ navigation }: Props) {
               </View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-              <Text style={styles.logoutIcon}>↗️</Text>
+              <Text style={styles.logoutIcon}>📤</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1441,14 +1441,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  // languageToggle: {
-  //   paddingHorizontal: 8,
-  //   paddingVertical: 4,
-  // },
   languageToggle: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "#f5f7f5ff",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1482,7 +1478,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   header: {
-    backgroundColor: "#81868bff",
+    backgroundColor: "#4A90E2",
     paddingTop: Platform.OS === 'ios' ? 45 : 15,
     paddingBottom: 12,
     paddingHorizontal: 16,
@@ -1504,8 +1500,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerIcon: {
-    fontSize: 24,
+    fontSize: 26,
     marginRight: 8,
+    backgroundColor: '#f8f9faff',
+    borderRadius: 22,
+    paddingBottom: 10,
+    paddingLeft: 6,
+    paddingRight: 6,
   },
   headerTitle: {
     fontSize: 20,
@@ -1521,17 +1522,17 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#dc3545",
+    backgroundColor: "#eff2f5ff",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#dc3545",
+    shadowColor: "#f0f3f8ff",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
   logoutIcon: {
-    fontSize: 16,
+    fontSize: 20,
     color: "#fff",
   },
   searchAndFilterContainer: {

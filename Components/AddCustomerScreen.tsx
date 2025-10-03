@@ -2221,6 +2221,7 @@
 //     color: "#fff",
 //   },
 // });
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -2269,10 +2270,10 @@ const translations = {
     addNewCustomer: 'नवीन ग्राहक जोडा',
     updateCustomerDetails: 'ग्राहकाची माहिती अद्यावत करा',
     fillCustomerDetails: 'ग्राहकाची माहिती भरा',
-    waterPurifierPhoto: 'वॉटर प्युरिफायरचा फोटो',
+    waterPurifierPhoto: 'उपकरणाचा फोटो',
     optional: 'ऐच्छिक',
     required: 'आवश्यक',
-    addPhotoDescription: 'ग्राहकाच्या वॉटर प्युरिफायरचा फोटो घ्या',
+    addPhotoDescription: 'ग्राहकाच्या उपकरणाचा फोटो घ्या',
     changePhoto: 'फोटो बदला',
     addPhoto: 'फोटो जोडा',
     takePhotoOrChoose: 'फोटो काढा किंवा गॅलरीमधून निवडा',
@@ -2341,10 +2342,10 @@ const translations = {
     addNewCustomer: 'Add New Customer',
     updateCustomerDetails: 'Update customer details',
     fillCustomerDetails: 'Fill in customer details',
-    waterPurifierPhoto: 'Water Purifier Photo',
+    waterPurifierPhoto: 'Appliance Photo',
     optional: 'Optional',
     required: 'Required',
-    addPhotoDescription: 'Take a photo of the customer\'s water purifier',
+    addPhotoDescription: 'Take a photo of the customer\'s appliance',
     changePhoto: 'Change Photo',
     addPhoto: 'Add Photo',
     takePhotoOrChoose: 'Take a photo or choose from gallery',
@@ -3141,7 +3142,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
-    backgroundColor: "#81868bff",
+    backgroundColor: "#4A90E2",
     paddingTop: 20,
     paddingBottom: 30,
     paddingHorizontal: 20,
@@ -3161,7 +3162,7 @@ const styles = StyleSheet.create({
   languageToggle: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "#f5f7f5ff",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -3490,7 +3491,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#e6e4e4ff",
     borderWidth: 1,
     borderColor: "#6c757d",
     borderRadius: 8,
@@ -3505,7 +3506,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 2,
-    backgroundColor: "#81868bff",
+    backgroundColor: "#4A90E2",
     borderRadius: 8,
     padding: 16,
     alignItems: "center",

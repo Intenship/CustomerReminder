@@ -1389,7 +1389,7 @@ const styles = StyleSheet.create({
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: "#f5f7f5ff",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -1426,7 +1426,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? 50 : 20,
     paddingBottom: 16,
     paddingHorizontal: 20,
-    backgroundColor: "#81868bff",
+    backgroundColor: "#4A90E2",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1442,9 +1442,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   backIcon: {
-    fontSize: 20,
+    fontSize: 22,
     color: "#fff",
     fontWeight: "bold",
+    paddingBottom: 14,
   },
   headerTitle: {
     fontSize: 20,
@@ -1457,12 +1458,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "#4A90E2",
     justifyContent: "center",
     alignItems: "center",
   },
   shareIcon: {
-    fontSize: 16,
+    fontSize: 26,
     color: "#fff",
   },
   content: {
@@ -1634,6 +1635,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#1a1a1a",
     marginBottom: 2,
+    textAlign: "center",
   },
   actionSubtitle: {
     fontSize: 10,
@@ -1707,8 +1709,8 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   addressValue: {
-    color: "#ff6b35",
-    textDecorationLine: "underline",
+    color: "#94613cff",
+    // textDecorationLine: "underline",
   },
   deleteButton: {
     flexDirection: "row",
