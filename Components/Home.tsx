@@ -792,6 +792,7 @@ const translations = {
     previous: '← मागील',
     next: 'पुढील →',
     page: 'पान',
+    logout:'लॉगआउट',
     logoutConfirm: 'तुम्हाला खात्रीपूर्वक लॉगआउट करायचे आहे का?',
     cancel: 'रद्द करा',
     deleteCustomer: 'ग्राहक हटवा',
@@ -828,6 +829,7 @@ const translations = {
     previous: '← Previous',
     next: 'Next →',
     page: 'Page',
+    logout:'Logout',
     logoutConfirm: 'Are you sure you want to logout?',
     cancel: 'Cancel',
     deleteCustomer: 'Delete Customer',
@@ -1033,12 +1035,12 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleLogout = async () => {
     Alert.alert(
-      "लॉगआउट",
+      t.logout,
       t.logoutConfirm,
       [
         { text: t.cancel, style: "cancel" },
         {
-          text: "लॉगआउट",
+          text: t.logout,
           style: "destructive",
           onPress: async () => {
             try {
