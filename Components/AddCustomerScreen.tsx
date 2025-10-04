@@ -2262,7 +2262,7 @@ type Props = {
 
 type MessageType = 'default' | 'custom';
 
-const BUSINESS_PHONE = "9373332947";
+const BUSINESS_PHONE = "8446682152";
 
 const translations = {
   marathi: {
@@ -2320,7 +2320,7 @@ const translations = {
     updateError: 'ग्राहक अद्यावत करताना त्रुटी',
     saveError: 'ग्राहक जतन करताना त्रुटी',
     defaultSMSTemplate: (name: string, phone: string) => 
-      `नमस्कार ${name}, तुमचे वॉटर प्युरिफायर सर्व्हिसिंगसाठी तयार आहे. कृपया ${phone} वर कॉल करा.`,
+      `नमस्कार ${name}, आपल्या उपकरणाचा फोटो सर्व्हिसिंगसाठी तयार आहे. कृपया ${phone} वर कॉल करा.`,
     smsNotAvailable: 'एसएमएस उपलब्ध नाही',
     smsNotAvailableMessage: 'तुमच्या डिव्हाइसवर एसएमएस उपलब्ध नाही',
     smsError: 'एसएमएस त्रुटी',
@@ -2392,7 +2392,7 @@ const translations = {
     updateError: 'Error updating customer',
     saveError: 'Error saving customer',
     defaultSMSTemplate: (name: string, phone: string) => 
-      `Hello ${name}, your water purifier is due for servicing. Please call ${phone}.`,
+      `Hello ${name}, your Applicance Photo is due for servicing. Please call ${phone}.`,
     smsNotAvailable: 'SMS Not Available',
     smsNotAvailableMessage: 'SMS is not available on your device',
     smsError: 'SMS Error',
@@ -3065,10 +3065,38 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
             )}
           </View>
         </View>
+         <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+            disabled={saving}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cancelButtonText}>{t.cancelButton}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+            activeOpacity={0.8}
+          >
+            {saving ? (
+              <View style={styles.savingContainer}>
+                <ActivityIndicator color="#fff" size="small" />
+                <Text style={styles.savingText}>{t.saving}</Text>
+              </View>
+            ) : (
+              <Text style={styles.saveButtonText}>
+                {isEditing ? t.updateCustomer : t.saveCustomer}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Fixed Action Buttons at Bottom */}
-      <View style={styles.actionButtonsContainer}>
+      {/* <View style={styles.actionButtonsContainer}>
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={styles.cancelButton}
@@ -3097,7 +3125,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </View> */}
     </KeyboardAvoidingView>
   );
 }
@@ -3485,10 +3513,32 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
   },
-  actionButtons: {
+  // actionButtons: {
+  //   flexDirection: "row",
+  //   gap: 12,
+  // },
+  // cancelButton: {
+  //   flex: 1,
+  //   backgroundColor: "#e6e4e4ff",
+  //   borderWidth: 1,
+  //   borderColor: "#6c757d",
+  //   borderRadius: 8,
+  //   padding: 16,
+  //   alignItems: "center",
+  //   marginBottom: 20,
+  // },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#6c757d",
+  },
+actionButtons: {
     flexDirection: "row",
     gap: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
   },
+  
   cancelButton: {
     flex: 1,
     backgroundColor: "#e6e4e4ff",
@@ -3497,20 +3547,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
-    marginBottom: 20,
   },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#6c757d",
-  },
+  
   saveButton: {
     flex: 2,
     backgroundColor: "#4A90E2",
     borderRadius: 8,
     padding: 16,
     alignItems: "center",
-    marginBottom: 20,
   },
   saveButtonDisabled: {
     backgroundColor: "#6c757d",
