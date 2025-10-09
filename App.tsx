@@ -101,7 +101,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Notifications from 'expo-notifications';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebaseConfig';
-
+import * as BackgroundFetch from 'expo-background-fetch';
+import * as TaskManager from 'expo-task-manager';
 import HomeScreen from './Components/Home';
 import LoginScreen from './Components/LoginScreen';
 import SignUpScreen from './Components/SignUpScreen';
@@ -127,6 +128,22 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
+
+  const BACKGROUND_NOTIFICATION_TASK = 'background-notification-task';
+
+// Initialize background task on app startup
+useEffect(() => {
+  (async () => {
+    const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_NOTIFICATION_TASK);
+    if (!isRegistered) {
+      await BackgroundFetch.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK, {
+        minimumInterval: 15 * 60, // 15 minutes
+        stopOnTerminate: false,
+        startOnBoot: true,
+      });
+    }
+  })();
+}, []);
 
   useEffect(() => {
     // Listen to authentication state changes

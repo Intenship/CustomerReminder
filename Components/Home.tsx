@@ -1007,10 +1007,10 @@ export default function HomeScreen({ navigation }: Props) {
     try {
       setLoadingMore(true);
       const newLength = Math.max(PAGE_SIZE, displayedCustomers.length - PAGE_SIZE);
-      const filtered = applyFiltersToAllData();
-      const newDisplayed = filtered.slice(0, newLength);
+      const filteredData: Customer[]  = applyFiltersToAllData();
+      const newDisplayed = filteredData.slice(0, newLength);
       setDisplayedCustomers(newDisplayed);
-      setHasMore(newLength < filtered.length);
+      setHasMore(newLength < filteredData.length);
       setLoadingMore(false);
     } catch (error) {
       setLoadingMore(false);
