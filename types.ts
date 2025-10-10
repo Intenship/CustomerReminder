@@ -1,3 +1,5 @@
+import { Timestamp } from "@firebase/firestore";
+
 // types.ts
 export interface Customer {
   messageType: string;
@@ -28,3 +30,14 @@ export type RootStackParamList = {
   CustomerDetails: { customerId: string }; 
 
 };
+
+export interface NotificationReminder {
+  id: string;
+  customerId: string;
+  customerName: string;
+  scheduledTime: Timestamp;
+  message: string;
+  sent: boolean;
+  expoPushToken: string;
+  errorCount: number;
+}
