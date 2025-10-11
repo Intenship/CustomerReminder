@@ -603,252 +603,252 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
     }
   };
 
-  // const handleSave = async () => {
-  //   if (!validateForm()) {
-  //     return;
-  //   }
+  const handleSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
 
-  //   setSaving(true);
-  //   try {
-  //     const messageToSave = messageType === 'custom' ? customMessage.trim() : getDefaultMessage();
+    setSaving(true);
+    try {
+      const messageToSave = messageType === 'custom' ? customMessage.trim() : getDefaultMessage();
 
-  //     const customerData = {
-  //       name: name.trim(),
-  //       phone: phone.trim(),
-  //       address: address.trim(),
-  //       photoBase64: photo || null,
-  //       notifyDate: notifyDate ? notifyDate.toISOString() : null,
-  //       messageType: messageType,
-  //       customMessage: messageToSave,
-  //       updatedAt: serverTimestamp(),
-  //       ...(isEditing ? {} : { createdAt: serverTimestamp() })
-  //     };
+      const customerData = {
+        name: name.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        photoBase64: photo || null,
+        notifyDate: notifyDate ? notifyDate.toISOString() : null,
+        messageType: messageType,
+        customMessage: messageToSave,
+        updatedAt: serverTimestamp(),
+        ...(isEditing ? {} : { createdAt: serverTimestamp() })
+      };
 
-  //     let customerId: string;
+      let customerId: string;
 
-  //     if (isEditing && customerToEdit?.id) {
-  //       const customerRef = doc(db, "customers", customerToEdit.id);
-  //       await updateDoc(customerRef, customerData);
-  //       customerId = customerToEdit.id;
-  //       console.log("✅ Updated customer id:", customerId);
-  //     } else {
-  //       const docRef = await addDoc(collection(db, "customers"), customerData);
-  //       customerId = docRef.id;
-  //       console.log("✅ Created new customer id:", customerId);
-  //     }
+      if (isEditing && customerToEdit?.id) {
+        const customerRef = doc(db, "customers", customerToEdit.id);
+        await updateDoc(customerRef, customerData);
+        customerId = customerToEdit.id;
+        console.log("✅ Updated customer id:", customerId);
+      } else {
+        const docRef = await addDoc(collection(db, "customers"), customerData);
+        customerId = docRef.id;
+        console.log("✅ Created new customer id:", customerId);
+      }
 
-  //     if (notifyDate) {
-  //       // 1. Schedule LOCAL NOTIFICATION (for your phone)
-  //       const hasPermission = await requestNotificationPermissions();
-  //       if (hasPermission) {
-  //         const notificationId = await scheduleLocalNotification(notifyDate, messageToSave);
+      if (notifyDate) {
+        // 1. Schedule LOCAL NOTIFICATION (for your phone)
+        const hasPermission = await requestNotificationPermissions();
+        if (hasPermission) {
+          const notificationId = await scheduleLocalNotification(notifyDate, messageToSave);
           
-  //         // Store in AsyncStorage for background task
-  //         await storeReminder(
-  //           customerId,
-  //           name.trim(),
-  //           phone.trim(),
-  //           notifyDate,
-  //           messageType,
-  //           messageToSave,
-  //           notificationId
-  //         );
+          // Store in AsyncStorage for background task
+          await storeReminder(
+            customerId,
+            name.trim(),
+            phone.trim(),
+            notifyDate,
+            messageType,
+            messageToSave,
+            notificationId
+          );
           
-  //         console.log("✅ Local notification scheduled and stored");
-  //       }
+          console.log("✅ Local notification scheduled and stored");
+        }
 
-  //       // 2. Store WHATSAPP REMINDER in Firestore (for customer)
-  //       // Remove old reminder if editing
-  //       if (isEditing && customerToEdit?.id) {
-  //         const remindersQuery = query(
-  //           collection(db, 'reminders'),
-  //           where('customerId', '==', customerToEdit.id)
-  //         );
-  //         const oldReminders = await getDocs(remindersQuery);
-  //         for (const oldReminder of oldReminders.docs) {
-  //           await deleteDoc(oldReminder.ref);
-  //         }
-  //       }
+        // 2. Store WHATSAPP REMINDER in Firestore (for customer)
+        // Remove old reminder if editing
+        if (isEditing && customerToEdit?.id) {
+          const remindersQuery = query(
+            collection(db, 'reminders'),
+            where('customerId', '==', customerToEdit.id)
+          );
+          const oldReminders = await getDocs(remindersQuery);
+          for (const oldReminder of oldReminders.docs) {
+            await deleteDoc(oldReminder.ref);
+          }
+        }
         
-  //       // Store new WhatsApp reminder
-  //       await addDoc(collection(db, "reminders"), {
-  //         customerId: customerId,
-  //         customerName: name.trim(),
-  //         phone: phone.trim(),
-  //         message: messageToSave,
-  //         scheduledTime: Timestamp.fromDate(notifyDate),
-  //         sent: false,
-  //         createdAt: serverTimestamp(),
-  //         messageType: messageType,
-  //         errorCount: 0
-  //       });
+        // Store new WhatsApp reminder
+        await addDoc(collection(db, "reminders"), {
+          customerId: customerId,
+          customerName: name.trim(),
+          phone: phone.trim(),
+          message: messageToSave,
+          scheduledTime: Timestamp.fromDate(notifyDate),
+          sent: false,
+          createdAt: serverTimestamp(),
+          messageType: messageType,
+          errorCount: 0
+        });
         
-  //       console.log("✅ WhatsApp reminder stored in Firestore");
-  //       console.log("   Customer:", name.trim());
-  //       console.log("   Phone:", phone.trim());
-  //       console.log("   Scheduled:", notifyDate.toISOString());
-  //       console.log("📱 BOTH reminders set: Local notification + WhatsApp message");
-  //     } else {
-  //       // Remove both reminders if date is cleared
-  //       await removeReminder(customerId);
+        console.log("✅ WhatsApp reminder stored in Firestore");
+        console.log("   Customer:", name.trim());
+        console.log("   Phone:", phone.trim());
+        console.log("   Scheduled:", notifyDate.toISOString());
+        console.log("📱 BOTH reminders set: Local notification + WhatsApp message");
+      } else {
+        // Remove both reminders if date is cleared
+        await removeReminder(customerId);
         
-  //       if (isEditing && customerToEdit?.id) {
-  //         const remindersQuery = query(
-  //           collection(db, 'reminders'),
-  //           where('customerId', '==', customerToEdit.id)
-  //         );
-  //         const oldReminders = await getDocs(remindersQuery);
-  //         for (const oldReminder of oldReminders.docs) {
-  //           await deleteDoc(oldReminder.ref);
-  //         }
-  //       }
-  //     }
+        if (isEditing && customerToEdit?.id) {
+          const remindersQuery = query(
+            collection(db, 'reminders'),
+            where('customerId', '==', customerToEdit.id)
+          );
+          const oldReminders = await getDocs(remindersQuery);
+          for (const oldReminder of oldReminders.docs) {
+            await deleteDoc(oldReminder.ref);
+          }
+        }
+      }
 
-  //     const successMessage = notifyDate
-  //       ? (isEditing 
-  //           ? `${t.customerUpdatedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना' : 'Notification on your phone'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`
-  //           : `${t.customerAddedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना' : 'Notification on your phone'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`)
-  //       : (isEditing ? t.customerUpdatedSimple : t.customerAddedSimple);
+      const successMessage = notifyDate
+        ? (isEditing 
+            ? `${t.customerUpdatedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना' : 'Notification on your phone'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`
+            : `${t.customerAddedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना' : 'Notification on your phone'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`)
+        : (isEditing ? t.customerUpdatedSimple : t.customerAddedSimple);
 
-  //     Alert.alert(t.success, successMessage, [
-  //       { text: "OK", onPress: () => navigation.goBack() }
-  //     ]);
-  //   } catch (err: any) {
-  //     console.error("❌ handleSave error:", err);
-  //     const errorMessage = err.message || (isEditing ? t.updateError : t.saveError);
-  //     Alert.alert(t.error, errorMessage);
-  //   } finally {
-  //     setSaving(false);
-  //   }
-  // };
+      Alert.alert(t.success, successMessage, [
+        { text: "OK", onPress: () => navigation.goBack() }
+      ]);
+    } catch (err: any) {
+      console.error("❌ handleSave error:", err);
+      const errorMessage = err.message || (isEditing ? t.updateError : t.saveError);
+      Alert.alert(t.error, errorMessage); 
+    } finally {
+      setSaving(false);
+    }
+  };
 
   
-const handleSave = async () => {
-  if (!validateForm()) {
-    return;
-  }
+// const handleSave = async () => {
+//   if (!validateForm()) {
+//     return;
+//   }
 
-  setSaving(true);
-  try {
-    const messageToSave = messageType === 'custom' ? customMessage.trim() : getDefaultMessage();
+//   setSaving(true);
+//   try {
+//     const messageToSave = messageType === 'custom' ? customMessage.trim() : getDefaultMessage();
 
-    const customerData = {
-      name: name.trim(),
-      phone: phone.trim(),
-      address: address.trim(),
-      photoBase64: photo || null,
-      notifyDate: notifyDate ? notifyDate.toISOString() : null,
-      messageType: messageType,
-      customMessage: messageToSave,
-      updatedAt: serverTimestamp(),
-      ...(isEditing ? {} : { createdAt: serverTimestamp() })
-    };
+//     const customerData = {
+//       name: name.trim(),
+//       phone: phone.trim(),
+//       address: address.trim(),
+//       photoBase64: photo || null,
+//       notifyDate: notifyDate ? notifyDate.toISOString() : null,
+//       messageType: messageType,
+//       customMessage: messageToSave,
+//       updatedAt: serverTimestamp(),
+//       ...(isEditing ? {} : { createdAt: serverTimestamp() })
+//     };
 
-    let customerId: string;
+//     let customerId: string;
 
-    if (isEditing && customerToEdit?.id) {
-      const customerRef = doc(db, "customers", customerToEdit.id);
-      await updateDoc(customerRef, customerData);
-      customerId = customerToEdit.id;
-      console.log("✅ Updated customer id:", customerId);
-    } else {
-      const docRef = await addDoc(collection(db, "customers"), customerData);
-      customerId = docRef.id;
-      console.log("✅ Created new customer id:", customerId);
-    }
+//     if (isEditing && customerToEdit?.id) {
+//       const customerRef = doc(db, "customers", customerToEdit.id);
+//       await updateDoc(customerRef, customerData);
+//       customerId = customerToEdit.id;
+//       console.log("✅ Updated customer id:", customerId);
+//     } else {
+//       const docRef = await addDoc(collection(db, "customers"), customerData);
+//       customerId = docRef.id;
+//       console.log("✅ Created new customer id:", customerId);
+//     }
 
-    if (notifyDate) {
-      // Get Expo Push Token for server-side notifications
-      const expoPushToken = await registerForPushNotificationsAsync();
+//     if (notifyDate) {
+//       // Get Expo Push Token for server-side notifications
+//       const expoPushToken = await registerForPushNotificationsAsync();
       
-      // 1. Schedule LOCAL NOTIFICATION (works only when app is in background)
-      const hasPermission = await requestNotificationPermissions();
-      if (hasPermission) {
-        const notificationId = await scheduleLocalNotification(notifyDate, messageToSave);
+//       // 1. Schedule LOCAL NOTIFICATION (works only when app is in background)
+//       const hasPermission = await requestNotificationPermissions();
+//       if (hasPermission) {
+//         const notificationId = await scheduleLocalNotification(notifyDate, messageToSave);
         
-        // Store in AsyncStorage for background task
-        await storeReminder(
-          customerId,
-          name.trim(),
-          phone.trim(),
-          notifyDate,
-          messageType,
-          messageToSave,
-          notificationId
-        );
+//         // Store in AsyncStorage for background task
+//         await storeReminder(
+//           customerId,
+//           name.trim(),
+//           phone.trim(),
+//           notifyDate,
+//           messageType,
+//           messageToSave,
+//           notificationId
+//         );
         
-        console.log("✅ Local notification scheduled and stored");
-      }
+//         console.log("✅ Local notification scheduled and stored");
+//       }
 
-      // 2. Store REMINDER in Firestore (for BOTH WhatsApp AND Push Notifications)
-      // Remove old reminder if editing
-      if (isEditing && customerToEdit?.id) {
-        const remindersQuery = query(
-          collection(db, 'reminders'),
-          where('customerId', '==', customerToEdit.id)
-        );
-        const oldReminders = await getDocs(remindersQuery);
-        for (const oldReminder of oldReminders.docs) {
-          await deleteDoc(oldReminder.ref);
-        }
-      }
+//       // 2. Store REMINDER in Firestore (for BOTH WhatsApp AND Push Notifications)
+//       // Remove old reminder if editing
+//       if (isEditing && customerToEdit?.id) {
+//         const remindersQuery = query(
+//           collection(db, 'reminders'),
+//           where('customerId', '==', customerToEdit.id)
+//         );
+//         const oldReminders = await getDocs(remindersQuery);
+//         for (const oldReminder of oldReminders.docs) {
+//           await deleteDoc(oldReminder.ref);
+//         }
+//       }
       
-      // Store new reminder with push token
-      await addDoc(collection(db, "reminders"), {
-        customerId: customerId,
-        customerName: name.trim(),
-        phone: phone.trim(),
-        message: messageToSave,
-        scheduledTime: Timestamp.fromDate(notifyDate),
-        expoPushToken: expoPushToken, // 🔥 This enables server-side push notifications
-        sent: false,
-        createdAt: serverTimestamp(),
-        messageType: messageType,
-        errorCount: 0
-      });
+//       // Store new reminder with push token
+//       await addDoc(collection(db, "reminders"), {
+//         customerId: customerId,
+//         customerName: name.trim(),
+//         phone: phone.trim(),
+//         message: messageToSave,
+//         scheduledTime: Timestamp.fromDate(notifyDate),
+//         expoPushToken: expoPushToken, // 🔥 This enables server-side push notifications
+//         sent: false,
+//         createdAt: serverTimestamp(),
+//         messageType: messageType,
+//         errorCount: 0
+//       });
       
-      console.log("✅ Reminder stored in Firestore with push token");
-      console.log("   Customer:", name.trim());
-      console.log("   Phone:", phone.trim());
-      console.log("   Push Token:", expoPushToken ? "✅ Enabled" : "❌ Not available");
-      console.log("   Scheduled:", notifyDate.toISOString());
-      console.log("📱 TRIPLE reminder system:");
-      console.log("   1. Local notification (app in background)");
-      console.log("   2. Push notification (app closed) ← THIS WORKS WHEN CLOSED!");
-      console.log("   3. WhatsApp message (to customer)");
-    } else {
-      // Remove reminders if date is cleared
-      await removeReminder(customerId);
+//       console.log("✅ Reminder stored in Firestore with push token");
+//       console.log("   Customer:", name.trim());
+//       console.log("   Phone:", phone.trim());
+//       console.log("   Push Token:", expoPushToken ? "✅ Enabled" : "❌ Not available");
+//       console.log("   Scheduled:", notifyDate.toISOString());
+//       console.log("📱 TRIPLE reminder system:");
+//       console.log("   1. Local notification (app in background)");
+//       console.log("   2. Push notification (app closed) ← THIS WORKS WHEN CLOSED!");
+//       console.log("   3. WhatsApp message (to customer)");
+//     } else {
+//       // Remove reminders if date is cleared
+//       await removeReminder(customerId);
       
-      if (isEditing && customerToEdit?.id) {
-        const remindersQuery = query(
-          collection(db, 'reminders'),
-          where('customerId', '==', customerToEdit.id)
-        );
-        const oldReminders = await getDocs(remindersQuery);
-        for (const oldReminder of oldReminders.docs) {
-          await deleteDoc(oldReminder.ref);
-        }
-      }
-    }
+//       if (isEditing && customerToEdit?.id) {
+//         const remindersQuery = query(
+//           collection(db, 'reminders'),
+//           where('customerId', '==', customerToEdit.id)
+//         );
+//         const oldReminders = await getDocs(remindersQuery);
+//         for (const oldReminder of oldReminders.docs) {
+//           await deleteDoc(oldReminder.ref);
+//         }
+//       }
+//     }
 
-    const successMessage = notifyDate
-      ? (isEditing 
-          ? `${t.customerUpdatedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना (बंद असतानाही)' : 'Push notification (even when closed)'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`
-          : `${t.customerAddedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना (बंद असतानाही)' : 'Push notification (even when closed)'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`)
-      : (isEditing ? t.customerUpdatedSimple : t.customerAddedSimple);
+//     const successMessage = notifyDate
+//       ? (isEditing 
+//           ? `${t.customerUpdatedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना (बंद असतानाही)' : 'Push notification (even when closed)'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`
+//           : `${t.customerAddedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना (बंद असतानाही)' : 'Push notification (even when closed)'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`)
+//       : (isEditing ? t.customerUpdatedSimple : t.customerAddedSimple);
 
-    Alert.alert(t.success, successMessage, [
-      { text: "OK", onPress: () => navigation.goBack() }
-    ]);
-  } catch (err: any) {
-    console.error("❌ handleSave error:", err);
-    const errorMessage = err.message || (isEditing ? t.updateError : t.saveError);
-    Alert.alert(t.error, errorMessage);
-  } finally {
-    setSaving(false);
-  }
-};
+//     Alert.alert(t.success, successMessage, [
+//       { text: "OK", onPress: () => navigation.goBack() }
+//     ]);
+//   } catch (err: any) {
+//     console.error("❌ handleSave error:", err);
+//     const errorMessage = err.message || (isEditing ? t.updateError : t.saveError);
+//     Alert.alert(t.error, errorMessage);
+//   } finally {
+//     setSaving(false);
+//   }
+// };
 
   return (
     <KeyboardAvoidingView
