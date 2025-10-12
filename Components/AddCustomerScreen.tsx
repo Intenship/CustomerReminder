@@ -1,4 +1,2336 @@
 
+// import React, { useState, useEffect } from "react";
+// import {
+//   View,
+//   TextInput,
+//   TouchableOpacity,
+//   Image,
+//   StyleSheet,
+//   Alert,
+//   ScrollView,
+//   Text,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ActivityIndicator,
+//   Switch,
+// } from "react-native";
+// import * as ImagePicker from "expo-image-picker";
+// import * as SMS from "expo-sms";
+// import * as FileSystem from "expo-file-system/legacy";
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+// import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+// import { RootStackParamList } from "../types";
+// import { db } from "../firebaseConfig";
+// import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+// import { RouteProp } from "@react-navigation/native";
+// import * as Notifications from "expo-notifications";
+// import * as TaskManager from 'expo-task-manager';
+// import * as BackgroundFetch from 'expo-background-fetch';
+
+// import { collection, addDoc, serverTimestamp, Timestamp, updateDoc, doc, query, where, getDocs, deleteDoc } from "firebase/firestore";
+
+// // ============ BACKGROUND TASK DEFINITION ============
+// const BACKGROUND_NOTIFICATION_TASK = 'background-notification-task';
+
+// TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async () => {
+//   try {
+//     console.log("🔄 Background task running...");
+//     const reminders = await AsyncStorage.getItem('customerReminders');
+    
+//     if (reminders) {
+//       const remindersArray = JSON.parse(reminders);
+//       const now = new Date();
+      
+//       for (const reminder of remindersArray) {
+//         if (!reminder.sent) {
+//           const reminderDate = new Date(reminder.date);
+          
+//           // Check if it's time to send (within 5 minute window)
+//           if (reminderDate <= now && (now.getTime() - reminderDate.getTime()) < 5 * 60 * 1000) {
+//             // Trigger notification
+//             await Notifications.scheduleNotificationAsync({
+//               content: {
+//                 title: "⏰ Service Reminder",
+//                 body: reminder.customMessage || `Hello ${reminder.name}, your appliance is due for servicing.`,
+//                 sound: true,
+//                 priority: Notifications.AndroidNotificationPriority.MAX,
+//                 data: { customerId: reminder.id, type: 'service_reminder' },
+//               },
+//               trigger: null, // Send immediately
+//             });
+            
+//             console.log(`✅ Notification sent for ${reminder.name}`);
+            
+//             // Mark as sent
+//             reminder.sent = true;
+//             await AsyncStorage.setItem('customerReminders', JSON.stringify(remindersArray));
+//           }
+//         }
+//       }
+//     }
+    
+//     return BackgroundFetch.BackgroundFetchResult.NewData;
+//   } catch (error) {
+//     console.error("❌ Background task error:", error);
+//     return BackgroundFetch.BackgroundFetchResult.Failed;
+//   }
+// });
+
+// // ============ CRITICAL NOTIFICATION CONFIGURATION ============
+// Notifications.setNotificationHandler({
+//   handleNotification: async () => ({
+//     shouldShowAlert: true,
+//     shouldPlaySound: true,
+//     shouldSetBadge: true,
+//     shouldShowBanner: true,
+//     shouldShowList: true,
+//   }),
+// });
+
+// type AddCustomerRouteProp = RouteProp<RootStackParamList, "AddCustomer">;
+// type AddCustomerNavigationProp = NativeStackNavigationProp<
+//   RootStackParamList,
+//   "AddCustomer"
+// >;
+
+// type Props = {
+//   navigation: AddCustomerNavigationProp;
+//   route: AddCustomerRouteProp;
+// };
+
+// type MessageType = 'default' | 'custom';
+
+// const BUSINESS_PHONE = "8446682152";
+
+// const translations = {
+//   marathi: {
+//     editCustomer: 'ग्राहक संपादित करा',
+//     addNewCustomer: 'नवीन ग्राहक जोडा',
+//     updateCustomerDetails: 'ग्राहकाची माहिती अद्यावत करा',
+//     fillCustomerDetails: 'ग्राहकाची माहिती भरा',
+//     waterPurifierPhoto: 'उपकरणाचा फोटो',
+//     optional: 'ऐच्छिक',
+//     required: 'आवश्यक',
+//     addPhotoDescription: 'ग्राहकाच्या उपकरणाचा फोटो घ्या',
+//     changePhoto: 'फोटो बदला',
+//     addPhoto: 'फोटो जोडा',
+//     takePhotoOrChoose: 'फोटो काढा किंवा गॅलरीमधून निवडा',
+//     customerDetails: 'ग्राहकाची माहिती',
+//     fullName: 'पूर्ण नाव',
+//     enterFullName: 'पूर्ण नाव प्रविष्ट करा',
+//     phoneNumber: 'फोन नंबर',
+//     phonePlaceholder: '+91 1234567890',
+//     address: 'पत्ता',
+//     enterAddress: 'पत्ता प्रविष्ट करा',
+//     smsReminderSettings: 'स्मरणपत्र सेटिंग्ज',
+//     smsReminderDescription: 'ग्राहकाला सर्व्हिसबद्दल आठवण करून देण्यासाठी स्वयंचलित स्मरणपत्र शेड्यूल करा',
+//     date: 'तारीख',
+//     selectDate: 'तारीख निवडा',
+//     time: 'वेळ',
+//     selectTime: 'वेळ निवडा',
+//     messageType: 'संदेश प्रकार',
+//     defaultMessage: 'डीफॉल्ट संदेश',
+//     customMessage: 'कस्टम संदेश',
+//     writeOwnMessage: 'तुमचा स्वतःचा संदेश लिहा',
+//     customMessageLabel: 'तुमचा कस्टम संदेश',
+//     enterCustomMessage: 'तुमचा संदेश येथे लिहा...',
+//     testSMS: 'चाचणी करा',
+//     smsReminderScheduled: 'स्मरणपत्र शेड्यूल केले',
+//     at: 'वाजता',
+//     viaWhatsAppAndNotification: 'WhatsApp आणि सूचना द्वारे',
+//     cancelButton: 'रद्द करा',
+//     updateCustomer: 'ग्राहक अद्यावत करा',
+//     saveCustomer: 'ग्राहक जतन करा',
+//     saving: 'जतन करत आहे...',
+//     success: 'यशस्वी',
+//     error: 'त्रुटी',
+//     validationError: 'प्रमाणीकरण त्रुटी',
+//     enterCustomerName: 'कृपया ग्राहकाचे नाव प्रविष्ट करा',
+//     enterPhoneNumber: 'कृपया फोन नंबर प्रविष्ट करा',
+//     enterValidPhone: 'कृपया वैध फोन नंबर प्रविष्ट करा',
+//     reminderDateFuture: 'स्मरणपत्राची तारीख भविष्यात असली पाहिजे',
+//     enterCustomMessageError: 'कस्टम संदेशासाठी कृपया संदेश प्रविष्ट करा',
+//     enterPhoneFirst: 'प्रथम फोन नंबर प्रविष्ट करा',
+//     customerUpdatedSuccess: 'ग्राहकाची माहिती अद्यावत केली गेली आणि स्मरणपत्र शेड्यूल केले:',
+//     customerAddedSuccess: 'ग्राहक जोडला गेला आणि स्मरणपत्र शेड्यूल केले:',
+//     customerUpdatedSimple: 'ग्राहकाची माहिती अद्यावत केली गेली',
+//     customerAddedSimple: 'ग्राहक यशस्वीरित्या जोडला गेला',
+//     updateError: 'ग्राहक अद्यावत करताना त्रुटी',
+//     saveError: 'ग्राहक जतन करताना त्रुटी',
+//     defaultSMSTemplate: (name: string, phone: string) => 
+//   `नमस्कार ${name}, या ग्राहकाची सर्व्हिसची वेळ आली आहे. कृपया ग्राहकाची माहिती तपासा.`,
+//     smsNotAvailable: 'एसएमएस उपलब्ध नाही',
+//     smsNotAvailableMessage: 'तुमच्या डिव्हाइसवर एसएमएस उपलब्ध नाही',
+//     smsError: 'एसएमएस त्रुटी',
+//     smsErrorMessage: 'एसएमएस पाठवताना त्रुटी आली',
+//     permissionRequired: 'परवानगी आवश्यक',
+//     cameraPermissionMessage: 'कृपया कॅमेरा परवानगी द्या',
+//     galleryPermissionMessage: 'कृपया गॅलरी परवानगी द्या',
+//     notificationPermissionMessage: 'सूचना परवानगी आवश्यक आहे',
+//     waterPurifierPhotoTitle: 'वॉटर प्युरिफायर फोटो',
+//     choosePhotoMethod: 'फोटो कसा जोडायचा ते निवडा',
+//     cancel: 'रद्द करा',
+//     takePhoto: 'फोटो काढा',
+//     chooseFromGallery: 'गॅलरीमधून निवडा',
+//     removePhoto: 'फोटो काढा',
+//     language: 'मराठी',
+//     marathi: 'मराठी',
+//   },
+//   english: {
+//     editCustomer: 'Edit Customer',
+//     addNewCustomer: 'Add New Customer',
+//     updateCustomerDetails: 'Update customer details',
+//     fillCustomerDetails: 'Fill in customer details',
+//     waterPurifierPhoto: 'Appliance Photo',
+//     optional: 'Optional',
+//     required: 'Required',
+//     addPhotoDescription: 'Take a photo of the customer\'s appliance',
+//     changePhoto: 'Change Photo',
+//     addPhoto: 'Add Photo',
+//     takePhotoOrChoose: 'Take a photo or choose from gallery',
+//     customerDetails: 'Customer Details',
+//     fullName: 'Full Name',
+//     enterFullName: 'Enter full name',
+//     phoneNumber: 'Phone Number',
+//     phonePlaceholder: '+91 1234567890',
+//     address: 'Address',
+//     enterAddress: 'Enter address',
+//     smsReminderSettings: 'Reminder Settings',
+//     smsReminderDescription: 'Schedule automatic reminders via WhatsApp and phone notification',
+//     date: 'Date',
+//     selectDate: 'Select Date',
+//     time: 'Time',
+//     selectTime: 'Select Time',
+//     messageType: 'Message Type',
+//     defaultMessage: 'Default Message',
+//     customMessage: 'Custom Message',
+//     writeOwnMessage: 'Write your own message',
+//     customMessageLabel: 'Your Custom Message',
+//     enterCustomMessage: 'Write your message here...',
+//     testSMS: 'Test Reminder',
+//     smsReminderScheduled: 'Reminder Scheduled',
+//     at: 'at',
+//     viaWhatsAppAndNotification: 'via WhatsApp & Notification',
+//     cancelButton: 'Cancel',
+//     updateCustomer: 'Update Customer',
+//     saveCustomer: 'Save Customer',
+//     saving: 'Saving...',
+//     success: 'Success',
+//     error: 'Error',
+//     validationError: 'Validation Error',
+//     enterCustomerName: 'Please enter customer name',
+//     enterPhoneNumber: 'Please enter phone number',
+//     enterValidPhone: 'Please enter a valid phone number',
+//     reminderDateFuture: 'Reminder date must be in the future',
+//     enterCustomMessageError: 'Please enter a custom message',
+//     enterPhoneFirst: 'Please enter phone number first',
+//     customerUpdatedSuccess: 'Customer updated and reminder scheduled for:',
+//     customerAddedSuccess: 'Customer added and reminder scheduled for:',
+//     customerUpdatedSimple: 'Customer updated successfully',
+//     customerAddedSimple: 'Customer added successfully',
+//     updateError: 'Error updating customer',
+//     saveError: 'Error saving customer',
+//     defaultSMSTemplate: (name: string, phone: string) => 
+//       `Hello ${name}, it’s time for this customer’s service. Please check the customer details.`,
+//     smsNotAvailable: 'SMS Not Available',
+//     smsNotAvailableMessage: 'SMS is not available on your device',
+//     smsError: 'SMS Error',
+//     smsErrorMessage: 'Error sending SMS',
+//     permissionRequired: 'Permission Required',
+//     cameraPermissionMessage: 'Please grant camera permission',
+//     galleryPermissionMessage: 'Please grant gallery permission',
+//     notificationPermissionMessage: 'Notification permission is required',
+//     waterPurifierPhotoTitle: 'Water Purifier Photo',
+//     choosePhotoMethod: 'Choose how to add photo',
+//     cancel: 'Cancel',
+//     takePhoto: 'Take Photo',
+//     chooseFromGallery: 'Choose from Gallery',
+//     removePhoto: 'Remove Photo',
+//     language: 'English',
+//     marathi: 'Marathi',
+//   },
+// };
+
+// const storeReminder = async (
+//   customerId: string,
+//   customerName: string,
+//   phone: string,
+//   date: Date,
+//   messageType: MessageType,
+//   customMessage?: string,
+//   notificationId?: string
+// ) => {
+//   try {
+//     const reminders = await AsyncStorage.getItem('customerReminders');
+//     const remindersArray = reminders ? JSON.parse(reminders) : [];
+
+//     const filteredReminders = remindersArray.filter((reminder: any) => reminder.id !== customerId);
+
+//     filteredReminders.push({
+//       id: customerId,
+//       name: customerName,
+//       phone: phone,
+//       date: date.toISOString(),
+//       messageType: messageType,
+//       customMessage: customMessage,
+//       created: new Date().toISOString(),
+//       sent: false,
+//       notificationId: notificationId || null,
+//     });
+
+//     await AsyncStorage.setItem('customerReminders', JSON.stringify(filteredReminders));
+//     console.log("✅ Reminder stored in AsyncStorage for local notifications");
+//   } catch (error) {
+//     console.error('❌ Failed to store reminder:', error);
+//   }
+// };
+
+// const removeReminder = async (customerId: string) => {
+//   try {
+//     const reminders = await AsyncStorage.getItem('customerReminders');
+//     if (reminders) {
+//       const remindersArray = JSON.parse(reminders);
+//       const reminder = remindersArray.find((r: any) => r.id === customerId);
+
+//       if (reminder?.notificationId) {
+//         await Notifications.cancelScheduledNotificationAsync(reminder.notificationId);
+//         console.log("✅ Cancelled scheduled notification:", reminder.notificationId);
+//       }
+
+//       const filteredReminders = remindersArray.filter((r: any) => r.id !== customerId);
+//       await AsyncStorage.setItem('customerReminders', JSON.stringify(filteredReminders));
+//     }
+//   } catch (error) {
+//     console.error('❌ Failed to remove reminder:', error);
+//   }
+// };
+
+// const registerForPushNotificationsAsync = async () => {
+//   let token;
+  
+//   if (Platform.OS === 'android') {
+//     await Notifications.setNotificationChannelAsync('default', {
+//       name: 'Service Reminders',
+//       importance: Notifications.AndroidImportance.MAX,
+//       vibrationPattern: [0, 250, 250, 250],
+//       lightColor: '#FF231F7C',
+//       sound: 'default',
+//     });
+//   }
+
+//   const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//   let finalStatus = existingStatus;
+  
+//   if (existingStatus !== 'granted') {
+//     const { status } = await Notifications.requestPermissionsAsync();
+//     finalStatus = status;
+//   }
+  
+//   if (finalStatus !== 'granted') {
+//     Alert.alert('Permission Required', 'Push notifications permission is required for reminders when app is closed.');
+//     return null;
+//   }
+
+//   token = (await Notifications.getExpoPushTokenAsync()).data;
+//   console.log('📱 Expo Push Token:', token);
+  
+//   return token;
+// };
+// // ============ REGISTER BACKGROUND FETCH ============
+// const registerBackgroundFetchAsync = async () => {
+//   try {
+//     await BackgroundFetch.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK, {
+//       minimumInterval: 15 * 60, // 15 minutes minimum on iOS
+//       stopOnTerminate: false, // Keep running even when app is closed
+//       startOnBoot: true, // Start when device reboots
+//     });
+//     console.log("✅ Background fetch registered successfully");
+//   } catch (error) {
+//     console.error("❌ Background fetch registration failed:", error);
+//   }
+// };
+
+// const requestNotificationPermissions = async () => {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+    
+//     if (existingStatus !== 'granted') {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+    
+//     if (finalStatus !== 'granted') {
+//       Alert.alert(
+//         'Permission Required',
+//         'Notification permissions are required to send reminders when the app is closed.'
+//       );
+//       return false;
+//     }
+    
+//     console.log("✅ Notification permissions granted");
+    
+//     if (Platform.OS === 'android') {
+//       await Notifications.setNotificationChannelAsync('default', {
+//         name: 'Service Reminders',
+//         importance: Notifications.AndroidImportance.MAX,
+//         vibrationPattern: [0, 250, 250, 250],
+//         lightColor: '#FF231F7C',
+//         sound: 'default',
+//       });
+//       console.log("✅ Android notification channel configured");
+//     }
+    
+//     return true;
+//   } catch (error) {
+//     console.error('❌ Error requesting notification permissions:', error);
+//     return false;
+//   }
+// };
+
+// export default function AddCustomerScreen({ navigation, route }: Props) {
+//   const { customerToEdit } = route.params || {};
+//   const isEditing = !!customerToEdit;
+
+//   const [isMarathi, setIsMarathi] = useState<boolean>(true);
+//   const [name, setName] = useState<string>("");
+//   const [phone, setPhone] = useState<string>("");
+//   const [address, setAddress] = useState<string>("");
+//   const [photo, setPhoto] = useState<string | undefined>(undefined);
+//   const [notifyDate, setNotifyDate] = useState<Date | null>(null);
+//   const [messageType, setMessageType] = useState<MessageType>('default');
+//   const [customMessage, setCustomMessage] = useState<string>("");
+//   const [saving, setSaving] = useState<boolean>(false);
+//   const [processingPhoto, setProcessingPhoto] = useState<boolean>(false);
+//   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+//   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
+
+//   const t = translations[isMarathi ? 'marathi' : 'english'];
+
+//   const getDefaultMessage = () => {
+//     const customerName = name.trim() || (isMarathi ? "ग्राहक" : "Customer");
+//     return t.defaultSMSTemplate(customerName, BUSINESS_PHONE);
+//   };
+
+//   useEffect(() => {
+//     if (customerToEdit) {
+//       setName(customerToEdit.name || "");
+//       setPhone(customerToEdit.phone || "");
+//       setAddress(customerToEdit.address || "");
+//       setPhoto(customerToEdit.photoBase64 || customerToEdit.photoURL || customerToEdit.photo);
+      
+//       const savedMessageType = customerToEdit.messageType;
+//       if (savedMessageType === 'default' || savedMessageType === 'custom') {
+//         setMessageType(savedMessageType);
+//       } else {
+//         setMessageType('default');
+//       }
+      
+//       setCustomMessage(customerToEdit.customMessage || "");
+//       if (customerToEdit.notifyDate) {
+//         setNotifyDate(new Date(customerToEdit.notifyDate));
+//       }
+//     }
+//   }, [customerToEdit]);
+
+//   useEffect(() => {
+//     (async () => {
+//       const { status: camStatus } = await ImagePicker.requestCameraPermissionsAsync();
+//       if (camStatus !== "granted") {
+//         Alert.alert(t.permissionRequired, t.cameraPermissionMessage);
+//       }
+      
+//       await requestNotificationPermissions();
+//       await registerBackgroundFetchAsync();
+//     })();
+//   }, []);
+
+//   const convertToBase64 = async (uri: string): Promise<string> => {
+//     try {
+//       setProcessingPhoto(true);
+//       const base64 = await FileSystem.readAsStringAsync(uri, {
+//         encoding: "base64",
+//       });
+//       return `data:image/jpeg;base64,${base64}`;
+//     } catch (error) {
+//       console.error("❌ Error converting to base64:", error);
+//       throw new Error("Failed to process image");
+//     } finally {
+//       setProcessingPhoto(false);
+//     }
+//   };
+
+//   const takePhoto = async () => {
+//     const result = await ImagePicker.launchCameraAsync({
+//       allowsEditing: true,
+//       quality: 0.5,
+//       aspect: [4, 3],
+//     });
+
+//     if (!result.canceled && result.assets?.length) {
+//       const base64Photo = await convertToBase64(result.assets[0].uri);
+//       setPhoto(base64Photo);
+//     }
+//   };
+
+//   const selectFromGallery = async () => {
+//     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+//     if (status !== "granted") {
+//       Alert.alert(t.permissionRequired, t.galleryPermissionMessage);
+//       return;
+//     }
+
+//     const result = await ImagePicker.launchImageLibraryAsync({
+//       allowsEditing: true,
+//       quality: 0.5,
+//       aspect: [4, 3],
+//     });
+
+//     if (!result.canceled && result.assets?.length) {
+//       const base64Photo = await convertToBase64(result.assets[0].uri);
+//       setPhoto(base64Photo);
+//     }
+//   };
+
+//   const showPhotoOptions = () => {
+//     Alert.alert(
+//       t.waterPurifierPhotoTitle,
+//       t.choosePhotoMethod,
+//       [
+//         { text: t.cancel, style: "cancel" },
+//         { text: t.takePhoto, onPress: takePhoto },
+//         { text: t.chooseFromGallery, onPress: selectFromGallery },
+//         ...(photo ? [{ text: t.removePhoto, onPress: () => setPhoto(undefined), style: "destructive" as const }] : [])
+//       ]
+//     );
+//   };
+
+//   const validateForm = () => {
+//     if (!name.trim()) {
+//       Alert.alert(t.validationError, t.enterCustomerName);
+//       return false;
+//     }
+//     if (!phone.trim()) {
+//       Alert.alert(t.validationError, t.enterPhoneNumber);
+//       return false;
+//     }
+//     if (!address.trim()) {
+//       Alert.alert(t.validationError, t.enterAddress);
+//       return false;
+//     }
+
+//     const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+//     if (!phoneRegex.test(phone.trim())) {
+//       Alert.alert(t.validationError, t.enterValidPhone);
+//       return false;
+//     }
+
+//     if (notifyDate && notifyDate <= new Date()) {
+//       Alert.alert(t.validationError, t.reminderDateFuture);
+//       return false;
+//     }
+
+//     if (notifyDate && messageType === 'custom' && !customMessage.trim()) {
+//       Alert.alert(t.validationError, t.enterCustomMessageError);
+//       return false;
+//     }
+
+//     return true;
+//   };
+
+//   const testNotification = async () => {
+//     if (!phone.trim()) {
+//       Alert.alert(t.error, t.enterPhoneFirst);
+//       return;
+//     }
+
+//     const message = messageType === 'custom' && customMessage.trim() 
+//       ? customMessage.trim() 
+//       : getDefaultMessage();
+
+//     // Test with immediate notification
+//     await Notifications.scheduleNotificationAsync({
+//       content: {
+//         title: isMarathi ? "🧪 परीक्षण स्मरणपत्र" : "🧪 Test Reminder",
+//         body: message,
+//         sound: true,
+//         priority: Notifications.AndroidNotificationPriority.MAX,
+//       },
+//       trigger: null,
+//     });
+
+//     Alert.alert(
+//       isMarathi ? "परीक्षण यशस्वी" : "Test Successful",
+//       isMarathi ? "सूचना पाठवली गेली (WhatsApp संदेश शेड्यूल केल्यावर पाठवला जाईल)" : "Notification sent (WhatsApp message will be sent when scheduled)"
+//     );
+//   };
+
+//   const scheduleLocalNotification = async (notifyDate: Date, message: string): Promise<string> => {
+//     try {
+//       let scheduledDate = new Date(notifyDate);
+
+//       if (scheduledDate <= new Date()) {
+//         scheduledDate.setDate(scheduledDate.getDate() + 1);
+//       }
+
+//       console.log("📅 Scheduling local notification for:", scheduledDate.toISOString());
+
+//       const notificationId = await Notifications.scheduleNotificationAsync({
+//         content: {
+//           title: isMarathi ? "⏰ सर्व्हिस स्मरणपत्र" : "⏰ Service Reminder",
+//           body: message,
+//           sound: true,
+//           priority: Notifications.AndroidNotificationPriority.MAX,
+//           data: {
+//             customerId: customerToEdit?.id || 'new',
+//             type: 'service_reminder',
+//           },
+//         },
+//         trigger: {
+//           type: Notifications.SchedulableTriggerInputTypes.DATE,
+//           date: scheduledDate,
+//         },
+//       });
+
+//       console.log("✅ Local notification scheduled!");
+//       console.log("   ID:", notificationId);
+//       console.log("   Date:", scheduledDate);
+      
+//       return notificationId;
+//     } catch (error) {
+//       console.error("❌ Error scheduling local notification:", error);
+//       throw error;
+//     }
+//   };
+
+//   const handleSave = async () => {
+//     if (!validateForm()) {
+//       return;
+//     }
+
+//     setSaving(true);
+//     try {
+//       const messageToSave = messageType === 'custom' ? customMessage.trim() : getDefaultMessage();
+
+//       const customerData = {
+//         name: name.trim(),
+//         phone: phone.trim(),
+//         address: address.trim(),
+//         photoBase64: photo || null,
+//         notifyDate: notifyDate ? notifyDate.toISOString() : null,
+//         messageType: messageType,
+//         customMessage: messageToSave,
+//         updatedAt: serverTimestamp(),
+//         ...(isEditing ? {} : { createdAt: serverTimestamp() })
+//       };
+
+//       let customerId: string;
+
+//       if (isEditing && customerToEdit?.id) {
+//         const customerRef = doc(db, "customers", customerToEdit.id);
+//         await updateDoc(customerRef, customerData);
+//         customerId = customerToEdit.id;
+//         console.log("✅ Updated customer id:", customerId);
+//       } else {
+//         const docRef = await addDoc(collection(db, "customers"), customerData);
+//         customerId = docRef.id;
+//         console.log("✅ Created new customer id:", customerId);
+//       }
+
+//       if (notifyDate) {
+//         // 1. Schedule LOCAL NOTIFICATION (for your phone)
+//         const hasPermission = await requestNotificationPermissions();
+//         if (hasPermission) {
+//           const notificationId = await scheduleLocalNotification(notifyDate, messageToSave);
+          
+//           // Store in AsyncStorage for background task
+//           await storeReminder(
+//             customerId,
+//             name.trim(),
+//             phone.trim(),
+//             notifyDate,
+//             messageType,
+//             messageToSave,
+//             notificationId
+//           );
+          
+//           console.log("✅ Local notification scheduled and stored");
+//         }
+
+//         // 2. Store WHATSAPP REMINDER in Firestore (for customer)
+//         // Remove old reminder if editing
+//         if (isEditing && customerToEdit?.id) {
+//           const remindersQuery = query(
+//             collection(db, 'reminders'),
+//             where('customerId', '==', customerToEdit.id)
+//           );
+//           const oldReminders = await getDocs(remindersQuery);
+//           for (const oldReminder of oldReminders.docs) {
+//             await deleteDoc(oldReminder.ref);
+//           }
+//         }
+        
+//         // Store new WhatsApp reminder
+//         await addDoc(collection(db, "reminders"), {
+//           customerId: customerId,
+//           customerName: name.trim(),
+//           phone: phone.trim(),
+//           message: messageToSave,
+//           scheduledTime: Timestamp.fromDate(notifyDate),
+//           sent: false,
+//           createdAt: serverTimestamp(),
+//           messageType: messageType,
+//           errorCount: 0
+//         });
+        
+//         console.log("✅ WhatsApp reminder stored in Firestore");
+//         console.log("   Customer:", name.trim());
+//         console.log("   Phone:", phone.trim());
+//         console.log("   Scheduled:", notifyDate.toISOString());
+//         console.log("📱 BOTH reminders set: Local notification + WhatsApp message");
+//       } else {
+//         // Remove both reminders if date is cleared
+//         await removeReminder(customerId);
+        
+//         if (isEditing && customerToEdit?.id) {
+//           const remindersQuery = query(
+//             collection(db, 'reminders'),
+//             where('customerId', '==', customerToEdit.id)
+//           );
+//           const oldReminders = await getDocs(remindersQuery);
+//           for (const oldReminder of oldReminders.docs) {
+//             await deleteDoc(oldReminder.ref);
+//           }
+//         }
+//       }
+
+//       const successMessage = notifyDate
+//         ? (isEditing 
+//             ? `${t.customerUpdatedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना' : 'Notification on your phone'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`
+//             : `${t.customerAddedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना' : 'Notification on your phone'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`)
+//         : (isEditing ? t.customerUpdatedSimple : t.customerAddedSimple);
+
+//       Alert.alert(t.success, successMessage, [
+//         { text: "OK", onPress: () => navigation.goBack() }
+//       ]);
+//     } catch (err: any) {
+//       console.error("❌ handleSave error:", err);
+//       const errorMessage = err.message || (isEditing ? t.updateError : t.saveError);
+//       Alert.alert(t.error, errorMessage); 
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+  
+// // const handleSave = async () => {
+// //   if (!validateForm()) {
+// //     return;
+// //   }
+
+// //   setSaving(true);
+// //   try {
+// //     const messageToSave = messageType === 'custom' ? customMessage.trim() : getDefaultMessage();
+
+// //     const customerData = {
+// //       name: name.trim(),
+// //       phone: phone.trim(),
+// //       address: address.trim(),
+// //       photoBase64: photo || null,
+// //       notifyDate: notifyDate ? notifyDate.toISOString() : null,
+// //       messageType: messageType,
+// //       customMessage: messageToSave,
+// //       updatedAt: serverTimestamp(),
+// //       ...(isEditing ? {} : { createdAt: serverTimestamp() })
+// //     };
+
+// //     let customerId: string;
+
+// //     if (isEditing && customerToEdit?.id) {
+// //       const customerRef = doc(db, "customers", customerToEdit.id);
+// //       await updateDoc(customerRef, customerData);
+// //       customerId = customerToEdit.id;
+// //       console.log("✅ Updated customer id:", customerId);
+// //     } else {
+// //       const docRef = await addDoc(collection(db, "customers"), customerData);
+// //       customerId = docRef.id;
+// //       console.log("✅ Created new customer id:", customerId);
+// //     }
+
+// //     if (notifyDate) {
+// //       // Get Expo Push Token for server-side notifications
+// //       const expoPushToken = await registerForPushNotificationsAsync();
+      
+// //       // 1. Schedule LOCAL NOTIFICATION (works only when app is in background)
+// //       const hasPermission = await requestNotificationPermissions();
+// //       if (hasPermission) {
+// //         const notificationId = await scheduleLocalNotification(notifyDate, messageToSave);
+        
+// //         // Store in AsyncStorage for background task
+// //         await storeReminder(
+// //           customerId,
+// //           name.trim(),
+// //           phone.trim(),
+// //           notifyDate,
+// //           messageType,
+// //           messageToSave,
+// //           notificationId
+// //         );
+        
+// //         console.log("✅ Local notification scheduled and stored");
+// //       }
+
+// //       // 2. Store REMINDER in Firestore (for BOTH WhatsApp AND Push Notifications)
+// //       // Remove old reminder if editing
+// //       if (isEditing && customerToEdit?.id) {
+// //         const remindersQuery = query(
+// //           collection(db, 'reminders'),
+// //           where('customerId', '==', customerToEdit.id)
+// //         );
+// //         const oldReminders = await getDocs(remindersQuery);
+// //         for (const oldReminder of oldReminders.docs) {
+// //           await deleteDoc(oldReminder.ref);
+// //         }
+// //       }
+      
+// //       // Store new reminder with push token
+// //       await addDoc(collection(db, "reminders"), {
+// //         customerId: customerId,
+// //         customerName: name.trim(),
+// //         phone: phone.trim(),
+// //         message: messageToSave,
+// //         scheduledTime: Timestamp.fromDate(notifyDate),
+// //         expoPushToken: expoPushToken, // 🔥 This enables server-side push notifications
+// //         sent: false,
+// //         createdAt: serverTimestamp(),
+// //         messageType: messageType,
+// //         errorCount: 0
+// //       });
+      
+// //       console.log("✅ Reminder stored in Firestore with push token");
+// //       console.log("   Customer:", name.trim());
+// //       console.log("   Phone:", phone.trim());
+// //       console.log("   Push Token:", expoPushToken ? "✅ Enabled" : "❌ Not available");
+// //       console.log("   Scheduled:", notifyDate.toISOString());
+// //       console.log("📱 TRIPLE reminder system:");
+// //       console.log("   1. Local notification (app in background)");
+// //       console.log("   2. Push notification (app closed) ← THIS WORKS WHEN CLOSED!");
+// //       console.log("   3. WhatsApp message (to customer)");
+// //     } else {
+// //       // Remove reminders if date is cleared
+// //       await removeReminder(customerId);
+      
+// //       if (isEditing && customerToEdit?.id) {
+// //         const remindersQuery = query(
+// //           collection(db, 'reminders'),
+// //           where('customerId', '==', customerToEdit.id)
+// //         );
+// //         const oldReminders = await getDocs(remindersQuery);
+// //         for (const oldReminder of oldReminders.docs) {
+// //           await deleteDoc(oldReminder.ref);
+// //         }
+// //       }
+// //     }
+
+// //     const successMessage = notifyDate
+// //       ? (isEditing 
+// //           ? `${t.customerUpdatedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना (बंद असतानाही)' : 'Push notification (even when closed)'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`
+// //           : `${t.customerAddedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना (बंद असतानाही)' : 'Push notification (even when closed)'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`)
+// //       : (isEditing ? t.customerUpdatedSimple : t.customerAddedSimple);
+
+// //     Alert.alert(t.success, successMessage, [
+// //       { text: "OK", onPress: () => navigation.goBack() }
+// //     ]);
+// //   } catch (err: any) {
+// //     console.error("❌ handleSave error:", err);
+// //     const errorMessage = err.message || (isEditing ? t.updateError : t.saveError);
+// //     Alert.alert(t.error, errorMessage);
+// //   } finally {
+// //     setSaving(false);
+// //   }
+// // };
+
+//   return (
+//     <KeyboardAvoidingView
+//       style={styles.container}
+//       behavior={Platform.OS === "ios" ? "padding" : "height"}
+//     >
+//       <ScrollView
+//         style={styles.scrollContainer}
+//         contentContainerStyle={styles.scrollContent}
+//         keyboardShouldPersistTaps="handled"
+//         showsVerticalScrollIndicator={false}
+//       >
+//         <View style={styles.header}>
+//           <View style={styles.headerTop}>
+//             <Text style={styles.headerTitle}>
+//               {isEditing ? t.editCustomer : t.addNewCustomer}
+//             </Text>
+            
+//             <TouchableOpacity 
+//               style={styles.languageToggle} 
+//               onPress={() => setIsMarathi(!isMarathi)}
+//             >
+//               <View style={styles.checkboxContainer}>
+//                 <View style={[styles.checkbox, isMarathi && styles.checkboxChecked]}>
+//                   {isMarathi && <Text style={styles.checkmark}>✓</Text>}
+//                 </View>
+//                 <Text style={styles.languageText}>{t.language}</Text>
+//               </View>
+//             </TouchableOpacity>
+//           </View>
+//           <Text style={styles.headerSubtitle}>
+//             {isEditing ? t.updateCustomerDetails : t.fillCustomerDetails}
+//           </Text>
+//         </View>
+
+//         <View style={styles.formContainer}>
+//           <View style={styles.photoSection}>
+//             <View style={styles.sectionHeader}>
+//               <Text style={styles.sectionTitle}>{t.waterPurifierPhoto}</Text>
+//               <Text style={styles.optionalBadge}>{t.optional}</Text>
+//             </View>
+//             <Text style={styles.sectionDescription}>
+//               {t.addPhotoDescription}
+//             </Text>
+
+//             <View style={styles.photoContainer}>
+//               {photo ? (
+//                 <View style={styles.photoWrapper}>
+//                   <Image source={{ uri: photo }} style={styles.purifierPhoto} />
+//                   <View style={styles.photoOverlay}>
+//                     <TouchableOpacity
+//                       style={styles.photoActionButton}
+//                       onPress={showPhotoOptions}
+//                     >
+//                       <Text style={styles.photoActionText}>{t.changePhoto}</Text>
+//                     </TouchableOpacity>
+//                   </View>
+//                 </View>
+//               ) : (
+//                 <TouchableOpacity
+//                   style={styles.addPhotoContainer}
+//                   onPress={showPhotoOptions}
+//                   disabled={processingPhoto}
+//                 >
+//                   {processingPhoto ? (
+//                     <ActivityIndicator color="#007bff" size="large" />
+//                   ) : (
+//                     <>
+//                       <View style={styles.addPhotoIconContainer}>
+//                         <Text style={styles.addPhotoIcon}>📷</Text>
+//                       </View>
+//                       <Text style={styles.addPhotoTitle}>{t.addPhoto}</Text>
+//                       <Text style={styles.addPhotoSubtitle}>
+//                         {t.takePhotoOrChoose}
+//                       </Text>
+//                     </>
+//                   )}
+//                 </TouchableOpacity>
+//               )}
+//             </View>
+//           </View>
+
+//           <View style={styles.section}>
+//             <View style={styles.sectionHeader}>
+//               <Text style={styles.sectionTitle}>{t.customerDetails}</Text>
+//               <Text style={styles.requiredBadge}>{t.required}</Text>
+//             </View>
+
+//             <View style={styles.inputGroup}>
+//               <Text style={styles.inputLabel}>
+//                 {t.fullName} <Text style={styles.required}>*</Text>
+//               </Text>
+//               <TextInput
+//                 placeholder={t.enterFullName}
+//                 style={styles.input}
+//                 value={name}
+//                 onChangeText={setName}
+//                 placeholderTextColor="#999"
+//                 autoCapitalize="words"
+//               />
+//             </View>
+
+//             <View style={styles.inputGroup}>
+//               <Text style={styles.inputLabel}>
+//                 {t.phoneNumber} <Text style={styles.required}>*</Text>
+//               </Text>
+//               <TextInput
+//                 placeholder={t.phonePlaceholder}
+//                 style={styles.input}
+//                 value={phone}
+//                 onChangeText={setPhone}
+//                 keyboardType="phone-pad"
+//                 placeholderTextColor="#999"
+//                 autoComplete="tel"
+//               />
+//             </View>
+
+//             <View style={styles.inputGroup}>
+//               <Text style={styles.inputLabel}>
+//                 {t.address} <Text style={styles.required}>*</Text>
+//               </Text>
+//               <TextInput
+//                 placeholder={t.enterAddress}
+//                 style={[styles.input, styles.textArea]}
+//                 value={address}
+//                 onChangeText={setAddress}
+//                 multiline={true}
+//                 numberOfLines={3}
+//                 placeholderTextColor="#999"
+//                 textAlignVertical="top"
+//               />
+//             </View>
+//           </View>
+
+//           <View style={styles.section}>
+//             <View style={styles.sectionHeader}>
+//               <Text style={styles.sectionTitle}>{t.smsReminderSettings}</Text>
+//               <Text style={styles.optionalBadge}>{t.optional}</Text>
+//             </View>
+//             <Text style={styles.sectionDescription}>
+//               {t.smsReminderDescription}
+//             </Text>
+
+//             <View style={styles.dateTimeRow}>
+//               <TouchableOpacity
+//                 style={styles.dateTimeButton}
+//                 onPress={() => setShowDatePicker(true)}
+//                 activeOpacity={0.7}
+//               >
+//                 <Text style={styles.dateTimeIcon}>📅</Text>
+//                 <View style={styles.dateTimeContent}>
+//                   <Text style={styles.dateTimeLabel}>{t.date}</Text>
+//                   <Text style={styles.dateTimeValue}>
+//                     {notifyDate ? notifyDate.toLocaleDateString() : t.selectDate}
+//                   </Text>
+//                 </View>
+//               </TouchableOpacity>
+
+//               <TouchableOpacity
+//                 style={styles.dateTimeButton}
+//                 onPress={() => setShowTimePicker(true)}
+//                 activeOpacity={0.7}
+//               >
+//                 <Text style={styles.dateTimeIcon}>⏰</Text>
+//                 <View style={styles.dateTimeContent}>
+//                   <Text style={styles.dateTimeLabel}>{t.time}</Text>
+//                   <Text style={styles.dateTimeValue}>
+//                     {notifyDate ? notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : t.selectTime}
+//                   </Text>
+//                 </View>
+//               </TouchableOpacity>
+//             </View>
+
+//             <View style={styles.messageTypeSelection}>
+//               <Text style={styles.messageTypeLabel}>{t.messageType}</Text>
+              
+//               <TouchableOpacity
+//                 style={styles.radioOption}
+//                 onPress={() => setMessageType('default')}
+//                 activeOpacity={0.7}
+//               >
+//                 <View style={styles.radioButton}>
+//                   {messageType === 'default' && <View style={styles.radioButtonSelected} />}
+//                 </View>
+//                 <View style={styles.radioContent}>
+//                   <Text style={styles.radioLabel}>{t.defaultMessage}</Text>
+//                   <Text style={styles.radioDescription}>
+//                     {getDefaultMessage()}
+//                   </Text>
+//                 </View>
+//               </TouchableOpacity>
+
+//               <TouchableOpacity
+//                 style={styles.radioOption}
+//                 onPress={() => setMessageType('custom')}
+//                 activeOpacity={0.7}
+//               >
+//                 <View style={styles.radioButton}>
+//                   {messageType === 'custom' && <View style={styles.radioButtonSelected} />}
+//                 </View>
+//                 <View style={styles.radioContent}>
+//                   <Text style={styles.radioLabel}>{t.customMessage}</Text>
+//                   <Text style={styles.radioDescription}>{t.writeOwnMessage}</Text>
+//                 </View>
+//               </TouchableOpacity>
+//             </View>
+
+//             {messageType === 'custom' && (
+//               <View style={styles.inputGroup}>
+//                 <Text style={styles.inputLabel}>{t.customMessageLabel}</Text>
+//                 <TextInput
+//                   placeholder={t.enterCustomMessage}
+//                   style={[styles.input, styles.textArea]}
+//                   value={customMessage}
+//                   onChangeText={setCustomMessage}
+//                   multiline={true}
+//                   numberOfLines={4}
+//                   placeholderTextColor="#999"
+//                   textAlignVertical="top"
+//                 />
+//               </View>
+//             )}
+
+//             {phone.trim() && (
+//               <TouchableOpacity
+//                 style={styles.testButton}
+//                 onPress={testNotification}
+//                 activeOpacity={0.8}
+//               >
+//                 <Text style={styles.testButtonIcon}>📤</Text>
+//                 <Text style={styles.testButtonText}>{t.testSMS}</Text>
+//               </TouchableOpacity>
+//             )}
+
+//             {notifyDate && (
+//               <View style={styles.reminderPreview}>
+//                 <View style={styles.reminderPreviewHeader}>
+//                   <Text style={styles.reminderPreviewTitle}>{t.smsReminderScheduled}</Text>
+//                   <TouchableOpacity
+//                     onPress={() => setNotifyDate(null)}
+//                     style={styles.clearButton}
+//                   >
+//                     <Text style={styles.clearButtonText}>✕</Text>
+//                   </TouchableOpacity>
+//                 </View>
+//                 <Text style={styles.reminderPreviewDate}>
+//                   {notifyDate.toLocaleDateString('en-US', {
+//                     weekday: 'long',
+//                     year: 'numeric',
+//                     month: 'long',
+//                     day: 'numeric'
+//                   })}
+//                 </Text>
+//                 <Text style={styles.reminderPreviewTime}>
+//                   {t.at} {notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+//                 </Text>
+//                 <View style={styles.reminderMethodBadge}>
+//                   <Text style={styles.reminderMethodText}>{t.viaWhatsAppAndNotification}</Text>
+//                 </View>
+//               </View>
+//             )}
+
+//             {showDatePicker && (
+//               <DateTimePicker
+//                 value={notifyDate || new Date()}
+//                 mode="date"
+//                 display={Platform.OS === "ios" ? "inline" : "default"}
+//                 minimumDate={new Date()}
+//                 onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
+//                   setShowDatePicker(false);
+//                   if (event.type === "set" && selectedDate) {
+//                     const newDate = new Date(selectedDate);
+//                     if (notifyDate) {
+//                       newDate.setHours(notifyDate.getHours(), notifyDate.getMinutes());
+//                     } else {
+//                       const now = new Date();
+//                       newDate.setHours(now.getHours(), now.getMinutes());
+//                     }
+//                     setNotifyDate(newDate);
+//                   }
+//                 }}
+//               />
+//             )}
+
+//             {showTimePicker && (
+//               <DateTimePicker
+//                 value={notifyDate || new Date()}
+//                 mode="time"
+//                 display="default"
+//                 onChange={(event: DateTimePickerEvent, selectedTime?: Date) => {
+//                   setShowTimePicker(false);
+//                   if (event.type === "set" && selectedTime) {
+//                     const newDate = notifyDate ? new Date(notifyDate) : new Date();
+//                     newDate.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+//                     setNotifyDate(newDate);
+//                   }
+//                 }}
+//               />
+//             )}
+//           </View>
+//         </View>
+        
+//         <View style={styles.actionButtons}>
+//           <TouchableOpacity
+//             style={styles.cancelButton}
+//             onPress={() => navigation.goBack()}
+//             disabled={saving}
+//             activeOpacity={0.7}
+//           >
+//             <Text style={styles.cancelButtonText}>{t.cancelButton}</Text>
+//           </TouchableOpacity>
+
+//           <TouchableOpacity
+//             style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+//             onPress={handleSave}
+//             disabled={saving}
+//             activeOpacity={0.8}
+//           >
+//             {saving ? (
+//               <View style={styles.savingContainer}>
+//                 <ActivityIndicator color="#fff" size="small" />
+//                 <Text style={styles.savingText}>{t.saving}</Text>
+//               </View>
+//             ) : (
+//               <Text style={styles.saveButtonText}>
+//                 {isEditing ? t.updateCustomer : t.saveCustomer}
+//               </Text>
+//             )}
+//           </TouchableOpacity>
+//         </View>
+//       </ScrollView>
+//     </KeyboardAvoidingView>
+//   );
+// }
+
+
+
+
+
+
+
+
+
+
+// New working code
+
+// import React, { useState, useEffect } from "react";
+// import {
+//   View,
+//   TextInput,
+//   TouchableOpacity,
+//   Image,
+//   StyleSheet,
+//   Alert,
+//   ScrollView,
+//   Text,
+//   KeyboardAvoidingView,
+//   Platform,
+//   ActivityIndicator,
+//   Switch,
+// } from "react-native";
+// import * as ImagePicker from "expo-image-picker";
+// import * as SMS from "expo-sms";
+// import * as FileSystem from "expo-file-system/legacy";
+// import * as Location from "expo-location";
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+// import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+// import { RootStackParamList } from "../types";
+// import { db } from "../firebaseConfig";
+// import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+// import { RouteProp } from "@react-navigation/native";
+// import * as Notifications from "expo-notifications";
+// import * as TaskManager from 'expo-task-manager';
+// import * as BackgroundFetch from 'expo-background-fetch';
+
+// import { collection, addDoc, serverTimestamp, Timestamp, updateDoc, doc, query, where, getDocs, deleteDoc } from "firebase/firestore";
+
+// // ============ BACKGROUND TASK DEFINITION ============
+// const BACKGROUND_NOTIFICATION_TASK = 'background-notification-task';
+
+// TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async () => {
+//   try {
+//     console.log("🔄 Background task running...");
+//     const reminders = await AsyncStorage.getItem('customerReminders');
+    
+//     if (reminders) {
+//       const remindersArray = JSON.parse(reminders);
+//       const now = new Date();
+      
+//       for (const reminder of remindersArray) {
+//         if (!reminder.sent) {
+//           const reminderDate = new Date(reminder.date);
+          
+//           if (reminderDate <= now && (now.getTime() - reminderDate.getTime()) < 5 * 60 * 1000) {
+//             await Notifications.scheduleNotificationAsync({
+//               content: {
+//                 title: "⏰ Service Reminder",
+//                 body: reminder.customMessage || `Hello ${reminder.name}, your appliance is due for servicing.`,
+//                 sound: true,
+//                 priority: Notifications.AndroidNotificationPriority.MAX,
+//                 data: { customerId: reminder.id, type: 'service_reminder' },
+//               },
+//               trigger: null,
+//             });
+            
+//             console.log(`✅ Notification sent for ${reminder.name}`);
+//             reminder.sent = true;
+//             await AsyncStorage.setItem('customerReminders', JSON.stringify(remindersArray));
+//           }
+//         }
+//       }
+//     }
+    
+//     return BackgroundFetch.BackgroundFetchResult.NewData;
+//   } catch (error) {
+//     console.error("❌ Background task error:", error);
+//     return BackgroundFetch.BackgroundFetchResult.Failed;
+//   }
+// });
+
+// Notifications.setNotificationHandler({
+//   handleNotification: async () => ({
+//     shouldShowAlert: true,
+//     shouldPlaySound: true,
+//     shouldSetBadge: true,
+//     shouldShowBanner: true,
+//     shouldShowList: true,
+//   }),
+// });
+
+// type AddCustomerRouteProp = RouteProp<RootStackParamList, "AddCustomer">;
+// type AddCustomerNavigationProp = NativeStackNavigationProp<
+//   RootStackParamList,
+//   "AddCustomer"
+// >;
+
+// type Props = {
+//   navigation: AddCustomerNavigationProp;
+//   route: AddCustomerRouteProp;
+// };
+
+// type MessageType = 'default' | 'custom';
+
+// const BUSINESS_PHONE = "8446682152";
+
+// const translations = {
+//   marathi: {
+//     editCustomer: 'ग्राहक संपादित करा',
+//     addNewCustomer: 'नवीन ग्राहक जोडा',
+//     updateCustomerDetails: 'ग्राहकाची माहिती अद्यावत करा',
+//     fillCustomerDetails: 'ग्राहकाची माहिती भरा',
+//     waterPurifierPhoto: 'उपकरणाचा फोटो',
+//     optional: 'ऐच्छिक',
+//     required: 'आवश्यक',
+//     addPhotoDescription: 'ग्राहकाच्या उपकरणाचा फोटो घ्या',
+//     changePhoto: 'फोटो बदला',
+//     addPhoto: 'फोटो जोडा',
+//     takePhotoOrChoose: 'फोटो काढा किंवा गॅलरीमधून निवडा',
+//     customerDetails: 'ग्राहकाची माहिती',
+//     fullName: 'पूर्ण नाव',
+//     enterFullName: 'पूर्ण नाव प्रविष्ट करा',
+//     phoneNumber: 'फोन नंबर',
+//     phonePlaceholder: '+91 1234567890',
+//     address: 'पत्ता',
+//     enterAddress: 'पत्ता प्रविष्ट करा',
+//     getCurrentLocation: 'मौजूदा स्थान मिळवा',
+//     spareParts: 'स्पेयर पार्ट्स',
+//     enterSpareParts: 'स्पेयर पार्ट्स प्रविष्ट करा',
+//     addSpareParts: 'स्पेयर पार्ट्स जोडा',
+//     smsReminderSettings: 'स्मरणपत्र सेटिंग्ज',
+//     smsReminderDescription: 'ग्राहकाला सर्व्हिसबद्दल आठवण करून देण्यासाठी स्वयंचलित स्मरणपत्र शेड्यूल करा',
+//     date: 'तारीख',
+//     selectDate: 'तारीख निवडा',
+//     time: 'वेळ',
+//     selectTime: 'वेळ निवडा',
+//     messageType: 'संदेश प्रकार',
+//     defaultMessage: 'डीफॉल्ट संदेश',
+//     customMessage: 'कस्टम संदेश',
+//     writeOwnMessage: 'तुमचा स्वतःचा संदेश लिहा',
+//     customMessageLabel: 'तुमचा कस्टम संदेश',
+//     enterCustomMessage: 'तुमचा संदेश येथे लिहा...',
+//     testSMS: 'चाचणी करा',
+//     smsReminderScheduled: 'स्मरणपत्र शेड्यूल केले',
+//     at: 'वाजता',
+//     viaWhatsAppAndNotification: 'WhatsApp आणि सूचना द्वारे',
+//     cancelButton: 'रद्द करा',
+//     updateCustomer: 'ग्राहक अद्यावत करा',
+//     saveCustomer: 'ग्राहक जतन करा',
+//     saving: 'जतन करत आहे...',
+//     success: 'यशस्वी',
+//     error: 'त्रुटी',
+//     validationError: 'प्रमाणीकरण त्रुटी',
+//     enterCustomerName: 'कृपया ग्राहकाचे नाव प्रविष्ट करा',
+//     enterPhoneNumber: 'कृपया फोन नंबर प्रविष्ट करा',
+//     enterValidPhone: 'कृपया वैध फोन नंबर प्रविष्ट करा',
+//     reminderDateFuture: 'स्मरणपत्राची तारीख भविष्यात असली पाहिजे',
+//     enterCustomMessageError: 'कस्टम संदेशासाठी कृपया संदेश प्रविष्ट करा',
+//     enterPhoneFirst: 'प्रथम फोन नंबर प्रविष्ट करा',
+//     customerUpdatedSuccess: 'ग्राहकाची माहिती अद्यावत केली गेली आणि स्मरणपत्र शेड्यूल केले:',
+//     customerAddedSuccess: 'ग्राहक जोडला गेला आणि स्मरणपत्र शेड्यूल केले:',
+//     customerUpdatedSimple: 'ग्राहकाची माहिती अद्यावत केली गेली',
+//     customerAddedSimple: 'ग्राहक यशस्वीरित्या जोडला गेला',
+//     updateError: 'ग्राहक अद्यावत करताना त्रुटी',
+//     saveError: 'ग्राहक जतन करताना त्रुटी',
+//     defaultSMSTemplate: (name: string, phone: string) => 
+//       `नमस्कार ${name}, या ग्राहकाची सर्व्हिसची वेळ आली आहे. कृपया ग्राहकाची माहिती तपासा.`,
+//     smsNotAvailable: 'एसएमएस उपलब्ध नाही',
+//     smsNotAvailableMessage: 'तुमच्या डिव्हाइसवर एसएमएस उपलब्ध नाही',
+//     smsError: 'एसएमएस त्रुटी',
+//     smsErrorMessage: 'एसएमएस पाठवताना त्रुटी आली',
+//     permissionRequired: 'परवानगी आवश्यक',
+//     cameraPermissionMessage: 'कृपया कॅमेरा परवानगी द्या',
+//     galleryPermissionMessage: 'कृपया गॅलरी परवानगी द्या',
+//     notificationPermissionMessage: 'सूचना परवानगी आवश्यक आहे',
+//     locationPermissionMessage: 'स्थान परवानगी आवश्यक आहे',
+//     waterPurifierPhotoTitle: 'वॉटर प्युरिफायर फोटो',
+//     choosePhotoMethod: 'फोटो कसा जोडायचा ते निवडा',
+//     cancel: 'रद्द करा',
+//     takePhoto: 'फोटो काढा',
+//     chooseFromGallery: 'गॅलरीमधून निवडा',
+//     removePhoto: 'फोटो काढा',
+//     language: 'मराठी',
+//     marathi: 'मराठी',
+//     fetchingLocation: 'स्थान मिळवत आहे...',
+//     locationFetchError: 'स्थान मिळवताना त्रुटी',
+//   },
+//   english: {
+//     editCustomer: 'Edit Customer',
+//     addNewCustomer: 'Add New Customer',
+//     updateCustomerDetails: 'Update customer details',
+//     fillCustomerDetails: 'Fill in customer details',
+//     waterPurifierPhoto: 'Appliance Photo',
+//     optional: 'Optional',
+//     required: 'Required',
+//     addPhotoDescription: 'Take a photo of the customer\'s appliance',
+//     changePhoto: 'Change Photo',
+//     addPhoto: 'Add Photo',
+//     takePhotoOrChoose: 'Take a photo or choose from gallery',
+//     customerDetails: 'Customer Details',
+//     fullName: 'Full Name',
+//     enterFullName: 'Enter full name',
+//     phoneNumber: 'Phone Number',
+//     phonePlaceholder: '+91 1234567890',
+//     address: 'Address',
+//     enterAddress: 'Enter address',
+//     getCurrentLocation: 'Get Current Location',
+//     spareParts: 'Spare Parts',
+//     enterSpareParts: 'Enter spare parts',
+//     addSpareParts: 'Add Spare Parts',
+//     smsReminderSettings: 'Reminder Settings',
+//     smsReminderDescription: 'Schedule automatic reminders via WhatsApp and phone notification',
+//     date: 'Date',
+//     selectDate: 'Select Date',
+//     time: 'Time',
+//     selectTime: 'Select Time',
+//     messageType: 'Message Type',
+//     defaultMessage: 'Default Message',
+//     customMessage: 'Custom Message',
+//     writeOwnMessage: 'Write your own message',
+//     customMessageLabel: 'Your Custom Message',
+//     enterCustomMessage: 'Write your message here...',
+//     testSMS: 'Test Reminder',
+//     smsReminderScheduled: 'Reminder Scheduled',
+//     at: 'at',
+//     viaWhatsAppAndNotification: 'via WhatsApp & Notification',
+//     cancelButton: 'Cancel',
+//     updateCustomer: 'Update Customer',
+//     saveCustomer: 'Save Customer',
+//     saving: 'Saving...',
+//     success: 'Success',
+//     error: 'Error',
+//     validationError: 'Validation Error',
+//     enterCustomerName: 'Please enter customer name',
+//     enterPhoneNumber: 'Please enter phone number',
+//     enterValidPhone: 'Please enter a valid phone number',
+//     reminderDateFuture: 'Reminder date must be in the future',
+//     enterCustomMessageError: 'Please enter a custom message',
+//     enterPhoneFirst: 'Please enter phone number first',
+//     customerUpdatedSuccess: 'Customer updated and reminder scheduled for:',
+//     customerAddedSuccess: 'Customer added and reminder scheduled for:',
+//     customerUpdatedSimple: 'Customer updated successfully',
+//     customerAddedSimple: 'Customer added successfully',
+//     updateError: 'Error updating customer',
+//     saveError: 'Error saving customer',
+//     defaultSMSTemplate: (name: string, phone: string) => 
+//       `Hello ${name}, it's time for this customer's service. Please check the customer details.`,
+//     smsNotAvailable: 'SMS Not Available',
+//     smsNotAvailableMessage: 'SMS is not available on your device',
+//     smsError: 'SMS Error',
+//     smsErrorMessage: 'Error sending SMS',
+//     permissionRequired: 'Permission Required',
+//     cameraPermissionMessage: 'Please grant camera permission',
+//     galleryPermissionMessage: 'Please grant gallery permission',
+//     notificationPermissionMessage: 'Notification permission is required',
+//     locationPermissionMessage: 'Location permission is required',
+//     waterPurifierPhotoTitle: 'Water Purifier Photo',
+//     choosePhotoMethod: 'Choose how to add photo',
+//     cancel: 'Cancel',
+//     takePhoto: 'Take Photo',
+//     chooseFromGallery: 'Choose from Gallery',
+//     removePhoto: 'Remove Photo',
+//     language: 'English',
+//     marathi: 'Marathi',
+//     fetchingLocation: 'Fetching location...',
+//     locationFetchError: 'Error fetching location',
+//   },
+// };
+
+// const storeReminder = async (
+//   customerId: string,
+//   customerName: string,
+//   phone: string,
+//   date: Date,
+//   messageType: MessageType,
+//   customMessage?: string,
+//   notificationId?: string
+// ) => {
+//   try {
+//     const reminders = await AsyncStorage.getItem('customerReminders');
+//     const remindersArray = reminders ? JSON.parse(reminders) : [];
+
+//     const filteredReminders = remindersArray.filter((reminder: any) => reminder.id !== customerId);
+
+//     filteredReminders.push({
+//       id: customerId,
+//       name: customerName,
+//       phone: phone,
+//       date: date.toISOString(),
+//       messageType: messageType,
+//       customMessage: customMessage,
+//       created: new Date().toISOString(),
+//       sent: false,
+//       notificationId: notificationId || null,
+//     });
+
+//     await AsyncStorage.setItem('customerReminders', JSON.stringify(filteredReminders));
+//     console.log("✅ Reminder stored in AsyncStorage for local notifications");
+//   } catch (error) {
+//     console.error('❌ Failed to store reminder:', error);
+//   }
+// };
+
+// const removeReminder = async (customerId: string) => {
+//   try {
+//     const reminders = await AsyncStorage.getItem('customerReminders');
+//     if (reminders) {
+//       const remindersArray = JSON.parse(reminders);
+//       const reminder = remindersArray.find((r: any) => r.id === customerId);
+
+//       if (reminder?.notificationId) {
+//         await Notifications.cancelScheduledNotificationAsync(reminder.notificationId);
+//         console.log("✅ Cancelled scheduled notification:", reminder.notificationId);
+//       }
+
+//       const filteredReminders = remindersArray.filter((r: any) => r.id !== customerId);
+//       await AsyncStorage.setItem('customerReminders', JSON.stringify(filteredReminders));
+//     }
+//   } catch (error) {
+//     console.error('❌ Failed to remove reminder:', error);
+//   }
+// };
+
+// const registerForPushNotificationsAsync = async () => {
+//   let token;
+  
+//   if (Platform.OS === 'android') {
+//     await Notifications.setNotificationChannelAsync('default', {
+//       name: 'Service Reminders',
+//       importance: Notifications.AndroidImportance.MAX,
+//       vibrationPattern: [0, 250, 250, 250],
+//       lightColor: '#FF231F7C',
+//       sound: 'default',
+//     });
+//   }
+
+//   const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//   let finalStatus = existingStatus;
+  
+//   if (existingStatus !== 'granted') {
+//     const { status } = await Notifications.requestPermissionsAsync();
+//     finalStatus = status;
+//   }
+  
+//   if (finalStatus !== 'granted') {
+//     Alert.alert('Permission Required', 'Push notifications permission is required for reminders when app is closed.');
+//     return null;
+//   }
+
+//   token = (await Notifications.getExpoPushTokenAsync()).data;
+//   console.log('📱 Expo Push Token:', token);
+  
+//   return token;
+// };
+
+// const registerBackgroundFetchAsync = async () => {
+//   try {
+//     await BackgroundFetch.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK, {
+//       minimumInterval: 15 * 60,
+//       stopOnTerminate: false,
+//       startOnBoot: true,
+//     });
+//     console.log("✅ Background fetch registered successfully");
+//   } catch (error) {
+//     console.error("❌ Background fetch registration failed:", error);
+//   }
+// };
+
+// const requestNotificationPermissions = async () => {
+//   try {
+//     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+//     let finalStatus = existingStatus;
+    
+//     if (existingStatus !== 'granted') {
+//       const { status } = await Notifications.requestPermissionsAsync();
+//       finalStatus = status;
+//     }
+    
+//     if (finalStatus !== 'granted') {
+//       Alert.alert(
+//         'Permission Required',
+//         'Notification permissions are required to send reminders when the app is closed.'
+//       );
+//       return false;
+//     }
+    
+//     console.log("✅ Notification permissions granted");
+    
+//     if (Platform.OS === 'android') {
+//       await Notifications.setNotificationChannelAsync('default', {
+//         name: 'Service Reminders',
+//         importance: Notifications.AndroidImportance.MAX,
+//         vibrationPattern: [0, 250, 250, 250],
+//         lightColor: '#FF231F7C',
+//         sound: 'default',
+//       });
+//       console.log("✅ Android notification channel configured");
+//     }
+    
+//     return true;
+//   } catch (error) {
+//     console.error('❌ Error requesting notification permissions:', error);
+//     return false;
+//   }
+// };
+
+// export default function AddCustomerScreen({ navigation, route }: Props) {
+//   const { customerToEdit } = route.params || {};
+//   const isEditing = !!customerToEdit;
+
+//   const [isMarathi, setIsMarathi] = useState<boolean>(true);
+//   const [name, setName] = useState<string>("");
+//   const [phone, setPhone] = useState<string>("");
+//   const [address, setAddress] = useState<string>("");
+//   const [spareParts, setSpareParts] = useState<string>("");
+//   const [photo, setPhoto] = useState<string | undefined>(undefined);
+//   const [notifyDate, setNotifyDate] = useState<Date | null>(null);
+//   const [messageType, setMessageType] = useState<MessageType>('default');
+//   const [customMessage, setCustomMessage] = useState<string>("");
+//   const [saving, setSaving] = useState<boolean>(false);
+//   const [processingPhoto, setProcessingPhoto] = useState<boolean>(false);
+//   const [fetchingLocation, setFetchingLocation] = useState<boolean>(false);
+//   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+//   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
+
+//   const t = translations[isMarathi ? 'marathi' : 'english'];
+
+//   const getDefaultMessage = () => {
+//     const customerName = name.trim() || (isMarathi ? "ग्राहक" : "Customer");
+//     return t.defaultSMSTemplate(customerName, BUSINESS_PHONE);
+//   };
+
+//   useEffect(() => {
+//     if (customerToEdit) {
+//       setName(customerToEdit.name || "");
+//       setPhone(customerToEdit.phone || "");
+//       setAddress(customerToEdit.address || "");
+//       setSpareParts(customerToEdit.spareParts || "");
+//       setPhoto(customerToEdit.photoBase64 || customerToEdit.photoURL || customerToEdit.photo);
+      
+//       const savedMessageType = customerToEdit.messageType;
+//       if (savedMessageType === 'default' || savedMessageType === 'custom') {
+//         setMessageType(savedMessageType);
+//       } else {
+//         setMessageType('default');
+//       }
+      
+//       setCustomMessage(customerToEdit.customMessage || "");
+//       if (customerToEdit.notifyDate) {
+//         setNotifyDate(new Date(customerToEdit.notifyDate));
+//       }
+//     }
+//   }, [customerToEdit]);
+
+//   useEffect(() => {
+//     (async () => {
+//       const { status: camStatus } = await ImagePicker.requestCameraPermissionsAsync();
+//       if (camStatus !== "granted") {
+//         Alert.alert(t.permissionRequired, t.cameraPermissionMessage);
+//       }
+      
+//       await requestNotificationPermissions();
+//       await registerBackgroundFetchAsync();
+//     })();
+//   }, []);
+
+//   const getCurrentLocation = async () => {
+//     setFetchingLocation(true);
+//     try {
+//       const { status } = await Location.requestForegroundPermissionsAsync();
+//       if (status !== 'granted') {
+//         Alert.alert(t.permissionRequired, t.locationPermissionMessage);
+//         setFetchingLocation(false);
+//         return;
+//       }
+
+//       const location = await Location.getCurrentPositionAsync({});
+//       const { latitude, longitude } = location.coords;
+
+//       try {
+//         const addresses = await Location.reverseGeocodeAsync({
+//           latitude,
+//           longitude,
+//         });
+
+//         if (addresses && addresses.length > 0) {
+//           const addr = addresses[0];
+//           const formattedAddress = [
+//             addr.street,
+//             addr.city,
+//             addr.region,
+//             addr.postalCode,
+//             addr.country,
+//           ]
+//             .filter(Boolean)
+//             .join(', ');
+//           setAddress(formattedAddress);
+//         } else {
+//           setAddress(`${latitude}, ${longitude}`);
+//         }
+//       } catch (error) {
+//         setAddress(`${latitude}, ${longitude}`);
+//       }
+//     } catch (error) {
+//       console.error('❌ Location error:', error);
+//       Alert.alert(t.error, t.locationFetchError);
+//     } finally {
+//       setFetchingLocation(false);
+//     }
+//   };
+
+//   const convertToBase64 = async (uri: string): Promise<string> => {
+//     try {
+//       setProcessingPhoto(true);
+//       const base64 = await FileSystem.readAsStringAsync(uri, {
+//         encoding: "base64",
+//       });
+//       return `data:image/jpeg;base64,${base64}`;
+//     } catch (error) {
+//       console.error("❌ Error converting to base64:", error);
+//       throw new Error("Failed to process image");
+//     } finally {
+//       setProcessingPhoto(false);
+//     }
+//   };
+
+//   const takePhoto = async () => {
+//     const result = await ImagePicker.launchCameraAsync({
+//       allowsEditing: true,
+//       quality: 0.5,
+//       aspect: [4, 3],
+//     });
+
+//     if (!result.canceled && result.assets?.length) {
+//       const base64Photo = await convertToBase64(result.assets[0].uri);
+//       setPhoto(base64Photo);
+//     }
+//   };
+
+//   const selectFromGallery = async () => {
+//     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+//     if (status !== "granted") {
+//       Alert.alert(t.permissionRequired, t.galleryPermissionMessage);
+//       return;
+//     }
+
+//     const result = await ImagePicker.launchImageLibraryAsync({
+//       allowsEditing: true,
+//       quality: 0.5,
+//       aspect: [4, 3],
+//     });
+
+//     if (!result.canceled && result.assets?.length) {
+//       const base64Photo = await convertToBase64(result.assets[0].uri);
+//       setPhoto(base64Photo);
+//     }
+//   };
+
+//   const showPhotoOptions = () => {
+//     Alert.alert(
+//       t.waterPurifierPhotoTitle,
+//       t.choosePhotoMethod,
+//       [
+//         { text: t.cancel, style: "cancel" },
+//         { text: t.takePhoto, onPress: takePhoto },
+//         { text: t.chooseFromGallery, onPress: selectFromGallery },
+//         ...(photo ? [{ text: t.removePhoto, onPress: () => setPhoto(undefined), style: "destructive" as const }] : [])
+//       ]
+//     );
+//   };
+
+//   const validateForm = () => {
+//     if (!name.trim()) {
+//       Alert.alert(t.validationError, t.enterCustomerName);
+//       return false;
+//     }
+//     if (!phone.trim()) {
+//       Alert.alert(t.validationError, t.enterPhoneNumber);
+//       return false;
+//     }
+//     if (!address.trim()) {
+//       Alert.alert(t.validationError, t.enterAddress);
+//       return false;
+//     }
+
+//     const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+//     if (!phoneRegex.test(phone.trim())) {
+//       Alert.alert(t.validationError, t.enterValidPhone);
+//       return false;
+//     }
+
+//     if (notifyDate && notifyDate <= new Date()) {
+//       Alert.alert(t.validationError, t.reminderDateFuture);
+//       return false;
+//     }
+
+//     if (notifyDate && messageType === 'custom' && !customMessage.trim()) {
+//       Alert.alert(t.validationError, t.enterCustomMessageError);
+//       return false;
+//     }
+
+//     return true;
+//   };
+
+//   const testNotification = async () => {
+//     if (!phone.trim()) {
+//       Alert.alert(t.error, t.enterPhoneFirst);
+//       return;
+//     }
+
+//     const message = messageType === 'custom' && customMessage.trim() 
+//       ? customMessage.trim() 
+//       : getDefaultMessage();
+
+//     await Notifications.scheduleNotificationAsync({
+//       content: {
+//         title: isMarathi ? "🧪 परीक्षण स्मरणपत्र" : "🧪 Test Reminder",
+//         body: message,
+//         sound: true,
+//         priority: Notifications.AndroidNotificationPriority.MAX,
+//       },
+//       trigger: null,
+//     });
+
+//     Alert.alert(
+//       isMarathi ? "परीक्षण यशस्वी" : "Test Successful",
+//       isMarathi ? "सूचना पाठवली गेली (WhatsApp संदेश शेड्यूल केल्यावर पाठवला जाईल)" : "Notification sent (WhatsApp message will be sent when scheduled)"
+//     );
+//   };
+
+//   const scheduleLocalNotification = async (notifyDate: Date, message: string): Promise<string> => {
+//     try {
+//       let scheduledDate = new Date(notifyDate);
+
+//       if (scheduledDate <= new Date()) {
+//         scheduledDate.setDate(scheduledDate.getDate() + 1);
+//       }
+
+//       console.log("📅 Scheduling local notification for:", scheduledDate.toISOString());
+
+//       const notificationId = await Notifications.scheduleNotificationAsync({
+//         content: {
+//           title: isMarathi ? "⏰ सर्व्हिस स्मरणपत्र" : "⏰ Service Reminder",
+//           body: message,
+//           sound: true,
+//           priority: Notifications.AndroidNotificationPriority.MAX,
+//           data: {
+//             customerId: customerToEdit?.id || 'new',
+//             type: 'service_reminder',
+//           },
+//         },
+//         trigger: {
+//           type: Notifications.SchedulableTriggerInputTypes.DATE,
+//           date: scheduledDate,
+//         },
+//       });
+
+//       console.log("✅ Local notification scheduled!");
+//       console.log("   ID:", notificationId);
+//       console.log("   Date:", scheduledDate);
+      
+//       return notificationId;
+//     } catch (error) {
+//       console.error("❌ Error scheduling local notification:", error);
+//       throw error;
+//     }
+//   };
+
+//   const handleSave = async () => {
+//     if (!validateForm()) {
+//       return;
+//     }
+
+//     setSaving(true);
+//     try {
+//       const messageToSave = messageType === 'custom' ? customMessage.trim() : getDefaultMessage();
+
+//       const customerData = {
+//         name: name.trim(),
+//         phone: phone.trim(),
+//         address: address.trim(),
+//         spareParts: spareParts.trim(),
+//         photoBase64: photo || null,
+//         notifyDate: notifyDate ? notifyDate.toISOString() : null,
+//         messageType: messageType,
+//         customMessage: messageToSave,
+//         updatedAt: serverTimestamp(),
+//         ...(isEditing ? {} : { createdAt: serverTimestamp() })
+//       };
+
+//       let customerId: string;
+
+//       if (isEditing && customerToEdit?.id) {
+//         const customerRef = doc(db, "customers", customerToEdit.id);
+//         await updateDoc(customerRef, customerData);
+//         customerId = customerToEdit.id;
+//         console.log("✅ Updated customer id:", customerId);
+//       } else {
+//         const docRef = await addDoc(collection(db, "customers"), customerData);
+//         customerId = docRef.id;
+//         console.log("✅ Created new customer id:", customerId);
+//       }
+
+//       if (notifyDate) {
+//         const hasPermission = await requestNotificationPermissions();
+//         if (hasPermission) {
+//               const notificationId = await scheduleLocalNotification(notifyDate, messageToSave);
+          
+//           await storeReminder(
+//             customerId,
+//             name.trim(),
+//             phone.trim(),
+//             notifyDate,
+//             messageType,
+//             messageToSave,
+//             notificationId
+//           );
+          
+//           console.log("✅ Local notification scheduled and stored");
+//         }
+
+//         if (isEditing && customerToEdit?.id) {
+//           const remindersQuery = query(
+//             collection(db, 'reminders'),
+//             where('customerId', '==', customerToEdit.id)
+//           );
+//           const oldReminders = await getDocs(remindersQuery);
+//           for (const oldReminder of oldReminders.docs) {
+//             await deleteDoc(oldReminder.ref);
+//           }
+//         }
+        
+//         await addDoc(collection(db, "reminders"), {
+//           customerId: customerId,
+//           customerName: name.trim(),
+//           phone: phone.trim(),
+//           message: messageToSave,
+//           scheduledTime: Timestamp.fromDate(notifyDate),
+//           sent: false,
+//           createdAt: serverTimestamp(),
+//           messageType: messageType,
+//           errorCount: 0
+//         });
+        
+//         console.log("✅ WhatsApp reminder stored in Firestore");
+//       } else {
+//         await removeReminder(customerId);
+        
+//         if (isEditing && customerToEdit?.id) {
+//           const remindersQuery = query(
+//             collection(db, 'reminders'),
+//             where('customerId', '==', customerToEdit.id)
+//           );
+//           const oldReminders = await getDocs(remindersQuery);
+//           for (const oldReminder of oldReminders.docs) {
+//             await deleteDoc(oldReminder.ref);
+//           }
+//         }
+//       }
+
+//       const successMessage = notifyDate
+//         ? (isEditing 
+//             ? `${t.customerUpdatedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना' : 'Notification on your phone'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`
+//             : `${t.customerAddedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना' : 'Notification on your phone'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`)
+//         : (isEditing ? t.customerUpdatedSimple : t.customerAddedSimple);
+
+//       Alert.alert(t.success, successMessage, [
+//         { text: "OK", onPress: () => navigation.goBack() }
+//       ]);
+//     } catch (err: any) {
+//       console.error("❌ handleSave error:", err);
+//       const errorMessage = err.message || (isEditing ? t.updateError : t.saveError);
+//       Alert.alert(t.error, errorMessage);
+//     } finally {
+//       setSaving(false);
+//     }
+//   };
+
+//   return (
+//     <KeyboardAvoidingView
+//       style={styles.container}
+//       behavior={Platform.OS === "ios" ? "padding" : "height"}
+//     >
+//       <ScrollView
+//         style={styles.scrollContainer}
+//         contentContainerStyle={styles.scrollContent}
+//         keyboardShouldPersistTaps="handled"
+//         showsVerticalScrollIndicator={false}
+//       >
+//         <View style={styles.header}>
+//           <View style={styles.headerTop}>
+//             <Text style={styles.headerTitle}>
+//               {isEditing ? t.editCustomer : t.addNewCustomer}
+//             </Text>
+            
+//             <TouchableOpacity 
+//               style={styles.languageToggle} 
+//               onPress={() => setIsMarathi(!isMarathi)}
+//             >
+//               <View style={styles.checkboxContainer}>
+//                 <View style={[styles.checkbox, isMarathi && styles.checkboxChecked]}>
+//                   {isMarathi && <Text style={styles.checkmark}>✓</Text>}
+//                 </View>
+//                 <Text style={styles.languageText}>{t.language}</Text>
+//               </View>
+//             </TouchableOpacity>
+//           </View>
+//           <Text style={styles.headerSubtitle}>
+//             {isEditing ? t.updateCustomerDetails : t.fillCustomerDetails}
+//           </Text>
+//         </View>
+
+//         <View style={styles.formContainer}>
+//           <View style={styles.photoSection}>
+//             <View style={styles.sectionHeader}>
+//               <Text style={styles.sectionTitle}>{t.waterPurifierPhoto}</Text>
+//               <Text style={styles.optionalBadge}>{t.optional}</Text>
+//             </View>
+//             <Text style={styles.sectionDescription}>
+//               {t.addPhotoDescription}
+//             </Text>
+
+//             <View style={styles.photoContainer}>
+//               {photo ? (
+//                 <View style={styles.photoWrapper}>
+//                   <Image source={{ uri: photo }} style={styles.purifierPhoto} />
+//                   <View style={styles.photoOverlay}>
+//                     <TouchableOpacity
+//                       style={styles.photoActionButton}
+//                       onPress={showPhotoOptions}
+//                     >
+//                       <Text style={styles.photoActionText}>{t.changePhoto}</Text>
+//                     </TouchableOpacity>
+//                   </View>
+//                 </View>
+//               ) : (
+//                 <TouchableOpacity
+//                   style={styles.addPhotoContainer}
+//                   onPress={showPhotoOptions}
+//                   disabled={processingPhoto}
+//                 >
+//                   {processingPhoto ? (
+//                     <ActivityIndicator color="#007bff" size="large" />
+//                   ) : (
+//                     <>
+//                       <View style={styles.addPhotoIconContainer}>
+//                         <Text style={styles.addPhotoIcon}>📷</Text>
+//                       </View>
+//                       <Text style={styles.addPhotoTitle}>{t.addPhoto}</Text>
+//                       <Text style={styles.addPhotoSubtitle}>
+//                         {t.takePhotoOrChoose}
+//                       </Text>
+//                     </>
+//                   )}
+//                 </TouchableOpacity>
+//               )}
+//             </View>
+//           </View>
+
+//           <View style={styles.section}>
+//             <View style={styles.sectionHeader}>
+//               <Text style={styles.sectionTitle}>{t.customerDetails}</Text>
+//               <Text style={styles.requiredBadge}>{t.required}</Text>
+//             </View>
+
+//             <View style={styles.inputGroup}>
+//               <Text style={styles.inputLabel}>
+//                 {t.fullName} <Text style={styles.required}>*</Text>
+//               </Text>
+//               <TextInput
+//                 placeholder={t.enterFullName}
+//                 style={styles.input}
+//                 value={name}
+//                 onChangeText={setName}
+//                 placeholderTextColor="#999"
+//                 autoCapitalize="words"
+//               />
+//             </View>
+
+//             <View style={styles.inputGroup}>
+//               <Text style={styles.inputLabel}>
+//                 {t.phoneNumber} <Text style={styles.required}>*</Text>
+//               </Text>
+//               <TextInput
+//                 placeholder={t.phonePlaceholder}
+//                 style={styles.input}
+//                 value={phone}
+//                 onChangeText={setPhone}
+//                 keyboardType="phone-pad"
+//                 placeholderTextColor="#999"
+//                 autoComplete="tel"
+//               />
+//             </View>
+
+//             <View style={styles.inputGroup}>
+//               <View style={styles.addressLabelRow}>
+//                 <Text style={styles.inputLabel}>
+//                   {t.address} <Text style={styles.required}>*</Text>
+//                 </Text>
+//                 <TouchableOpacity
+//                   style={styles.locationButton}
+//                   onPress={getCurrentLocation}
+//                   disabled={fetchingLocation}
+//                 >
+//                   {fetchingLocation ? (
+//                     <ActivityIndicator color="#007bff" size="small" />
+//                   ) : (
+//                     <>
+//                       <Text style={styles.locationButtonIcon}>📍</Text>
+//                       <Text style={styles.locationButtonText}>{t.getCurrentLocation}</Text>
+//                     </>
+//                   )}
+//                 </TouchableOpacity>
+//               </View>
+//               <TextInput
+//                 placeholder={t.enterAddress}
+//                 style={[styles.input, styles.textArea]}
+//                 value={address}
+//                 onChangeText={setAddress}
+//                 multiline={true}
+//                 numberOfLines={3}
+//                 placeholderTextColor="#999"
+//                 textAlignVertical="top"
+//               />
+//             </View>
+
+//             <View style={styles.inputGroup}>
+//               <Text style={styles.inputLabel}>
+//                 {t.spareParts} <Text style={styles.optional}>({t.optional})</Text>
+//               </Text>
+//               <TextInput
+//                 placeholder={t.enterSpareParts}
+//                 style={[styles.input, styles.textArea]}
+//                 value={spareParts}
+//                 onChangeText={setSpareParts}
+//                 multiline={true}
+//                 numberOfLines={3}
+//                 placeholderTextColor="#999"
+//                 textAlignVertical="top"
+//               />
+//             </View>
+//           </View>
+
+//           <View style={styles.section}>
+//             <View style={styles.sectionHeader}>
+//               <Text style={styles.sectionTitle}>{t.smsReminderSettings}</Text>
+//               <Text style={styles.optionalBadge}>{t.optional}</Text>
+//             </View>
+//             <Text style={styles.sectionDescription}>
+//               {t.smsReminderDescription}
+//             </Text>
+
+//             <View style={styles.dateTimeRow}>
+//               <TouchableOpacity
+//                 style={styles.dateTimeButton}
+//                 onPress={() => setShowDatePicker(true)}
+//                 activeOpacity={0.7}
+//               >
+//                 <Text style={styles.dateTimeIcon}>📅</Text>
+//                 <View style={styles.dateTimeContent}>
+//                   <Text style={styles.dateTimeLabel}>{t.date}</Text>
+//                   <Text style={styles.dateTimeValue}>
+//                     {notifyDate ? notifyDate.toLocaleDateString() : t.selectDate}
+//                   </Text>
+//                 </View>
+//               </TouchableOpacity>
+
+//               <TouchableOpacity
+//                 style={styles.dateTimeButton}
+//                 onPress={() => setShowTimePicker(true)}
+//                 activeOpacity={0.7}
+//               >
+//                 <Text style={styles.dateTimeIcon}>⏰</Text>
+//                 <View style={styles.dateTimeContent}>
+//                   <Text style={styles.dateTimeLabel}>{t.time}</Text>
+//                   <Text style={styles.dateTimeValue}>
+//                     {notifyDate ? notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : t.selectTime}
+//                   </Text>
+//                 </View>
+//               </TouchableOpacity>
+//             </View>
+
+//             <View style={styles.messageTypeSelection}>
+//               <Text style={styles.messageTypeLabel}>{t.messageType}</Text>
+              
+//               <TouchableOpacity
+//                 style={styles.radioOption}
+//                 onPress={() => setMessageType('default')}
+//                 activeOpacity={0.7}
+//               >
+//                 <View style={styles.radioButton}>
+//                   {messageType === 'default' && <View style={styles.radioButtonSelected} />}
+//                 </View>
+//                 <View style={styles.radioContent}>
+//                   <Text style={styles.radioLabel}>{t.defaultMessage}</Text>
+//                   <Text style={styles.radioDescription}>
+//                     {getDefaultMessage()}
+//                   </Text>
+//                 </View>
+//               </TouchableOpacity>
+
+//               <TouchableOpacity
+//                 style={styles.radioOption}
+//                 onPress={() => setMessageType('custom')}
+//                 activeOpacity={0.7}
+//               >
+//                 <View style={styles.radioButton}>
+//                   {messageType === 'custom' && <View style={styles.radioButtonSelected} />}
+//                 </View>
+//                 <View style={styles.radioContent}>
+//                   <Text style={styles.radioLabel}>{t.customMessage}</Text>
+//                   <Text style={styles.radioDescription}>{t.writeOwnMessage}</Text>
+//                 </View>
+//               </TouchableOpacity>
+//             </View>
+
+//             {messageType === 'custom' && (
+//               <View style={styles.inputGroup}>
+//                 <Text style={styles.inputLabel}>{t.customMessageLabel}</Text>
+//                 <TextInput
+//                   placeholder={t.enterCustomMessage}
+//                   style={[styles.input, styles.textArea]}
+//                   value={customMessage}
+//                   onChangeText={setCustomMessage}
+//                   multiline={true}
+//                   numberOfLines={4}
+//                   placeholderTextColor="#999"
+//                   textAlignVertical="top"
+//                 />
+//               </View>
+//             )}
+
+//             {phone.trim() && (
+//               <TouchableOpacity
+//                 style={styles.testButton}
+//                 onPress={testNotification}
+//                 activeOpacity={0.8}
+//               >
+//                 <Text style={styles.testButtonIcon}>📤</Text>
+//                 <Text style={styles.testButtonText}>{t.testSMS}</Text>
+//               </TouchableOpacity>
+//             )}
+
+//             {notifyDate && (
+//               <View style={styles.reminderPreview}>
+//                 <View style={styles.reminderPreviewHeader}>
+//                   <Text style={styles.reminderPreviewTitle}>{t.smsReminderScheduled}</Text>
+//                   <TouchableOpacity
+//                     onPress={() => setNotifyDate(null)}
+//                     style={styles.clearButton}
+//                   >
+//                     <Text style={styles.clearButtonText}>✕</Text>
+//                   </TouchableOpacity>
+//                 </View>
+//                 <Text style={styles.reminderPreviewDate}>
+//                   {notifyDate.toLocaleDateString('en-US', {
+//                     weekday: 'long',
+//                     year: 'numeric',
+//                     month: 'long',
+//                     day: 'numeric'
+//                   })}
+//                 </Text>
+//                 <Text style={styles.reminderPreviewTime}>
+//                   {t.at} {notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+//                 </Text>
+//                 <View style={styles.reminderMethodBadge}>
+//                   <Text style={styles.reminderMethodText}>{t.viaWhatsAppAndNotification}</Text>
+//                 </View>
+//               </View>
+//             )}
+
+//             {showDatePicker && (
+//               <DateTimePicker
+//                 value={notifyDate || new Date()}
+//                 mode="date"
+//                 display={Platform.OS === "ios" ? "inline" : "default"}
+//                 minimumDate={new Date()}
+//                 onChange={(event: DateTimePickerEvent, selectedDate?: Date) => {
+//                   setShowDatePicker(false);
+//                   if (event.type === "set" && selectedDate) {
+//                     const newDate = new Date(selectedDate);
+//                     if (notifyDate) {
+//                       newDate.setHours(notifyDate.getHours(), notifyDate.getMinutes());
+//                     } else {
+//                       const now = new Date();
+//                       newDate.setHours(now.getHours(), now.getMinutes());
+//                     }
+//                     setNotifyDate(newDate);
+//                   }
+//                 }}
+//               />
+//             )}
+
+//             {showTimePicker && (
+//               <DateTimePicker
+//                 value={notifyDate || new Date()}
+//                 mode="time"
+//                 display="default"
+//                 onChange={(event: DateTimePickerEvent, selectedTime?: Date) => {
+//                   setShowTimePicker(false);
+//                   if (event.type === "set" && selectedTime) {
+//                     const newDate = notifyDate ? new Date(notifyDate) : new Date();
+//                     newDate.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+//                     setNotifyDate(newDate);
+//                   }
+//                 }}
+//               />
+//             )}
+//           </View>
+//         </View>
+        
+//         <View style={styles.actionButtons}>
+//           <TouchableOpacity
+//             style={styles.cancelButton}
+//             onPress={() => navigation.goBack()}
+//             disabled={saving}
+//             activeOpacity={0.7}
+//           >
+//             <Text style={styles.cancelButtonText}>{t.cancelButton}</Text>
+//           </TouchableOpacity>
+
+//           <TouchableOpacity
+//             style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+//             onPress={handleSave}
+//             disabled={saving}
+//             activeOpacity={0.8}
+//           >
+//             {saving ? (
+//               <View style={styles.savingContainer}>
+//                 <ActivityIndicator color="#fff" size="small" />
+//                 <Text style={styles.savingText}>{t.saving}</Text>
+//               </View>
+//             ) : (
+//               <Text style={styles.saveButtonText}>
+//                 {isEditing ? t.updateCustomer : t.saveCustomer}
+//               </Text>
+//             )}
+//           </TouchableOpacity>
+//         </View>
+//       </ScrollView>
+//     </KeyboardAvoidingView>
+//   );
+// }
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -17,6 +2349,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import * as SMS from "expo-sms";
 import * as FileSystem from "expo-file-system/legacy";
+import * as Location from "expo-location";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
@@ -45,9 +2378,7 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async () => {
         if (!reminder.sent) {
           const reminderDate = new Date(reminder.date);
           
-          // Check if it's time to send (within 5 minute window)
           if (reminderDate <= now && (now.getTime() - reminderDate.getTime()) < 5 * 60 * 1000) {
-            // Trigger notification
             await Notifications.scheduleNotificationAsync({
               content: {
                 title: "⏰ Service Reminder",
@@ -56,12 +2387,10 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async () => {
                 priority: Notifications.AndroidNotificationPriority.MAX,
                 data: { customerId: reminder.id, type: 'service_reminder' },
               },
-              trigger: null, // Send immediately
+              trigger: null,
             });
             
             console.log(`✅ Notification sent for ${reminder.name}`);
-            
-            // Mark as sent
             reminder.sent = true;
             await AsyncStorage.setItem('customerReminders', JSON.stringify(remindersArray));
           }
@@ -76,7 +2405,6 @@ TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async () => {
   }
 });
 
-// ============ CRITICAL NOTIFICATION CONFIGURATION ============
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -122,6 +2450,10 @@ const translations = {
     phonePlaceholder: '+91 1234567890',
     address: 'पत्ता',
     enterAddress: 'पत्ता प्रविष्ट करा',
+    getCurrentLocation: 'मौजूदा स्थान मिळवा',
+    spareParts: 'स्पेयर पार्ट्स',
+    enterSpareParts: 'स्पेयर पार्ट्स प्रविष्ट करा',
+    addSpareParts: 'स्पेयर पार्ट्स जोडा',
     smsReminderSettings: 'स्मरणपत्र सेटिंग्ज',
     smsReminderDescription: 'ग्राहकाला सर्व्हिसबद्दल आठवण करून देण्यासाठी स्वयंचलित स्मरणपत्र शेड्यूल करा',
     date: 'तारीख',
@@ -158,7 +2490,7 @@ const translations = {
     updateError: 'ग्राहक अद्यावत करताना त्रुटी',
     saveError: 'ग्राहक जतन करताना त्रुटी',
     defaultSMSTemplate: (name: string, phone: string) => 
-  `नमस्कार ${name}, या ग्राहकाची सर्व्हिसची वेळ आली आहे. कृपया ग्राहकाची माहिती तपासा.`,
+      `नमस्कार ${name}, ही तुम्हाला दिलेली आठवण आहे की तुमच्या उपकरणाची सर्व्हिसिंग बाकी आहे. कृपया 8446682152 या क्रमांकावर संपर्क साधा.`,
     smsNotAvailable: 'एसएमएस उपलब्ध नाही',
     smsNotAvailableMessage: 'तुमच्या डिव्हाइसवर एसएमएस उपलब्ध नाही',
     smsError: 'एसएमएस त्रुटी',
@@ -167,6 +2499,7 @@ const translations = {
     cameraPermissionMessage: 'कृपया कॅमेरा परवानगी द्या',
     galleryPermissionMessage: 'कृपया गॅलरी परवानगी द्या',
     notificationPermissionMessage: 'सूचना परवानगी आवश्यक आहे',
+    locationPermissionMessage: 'स्थान परवानगी आवश्यक आहे',
     waterPurifierPhotoTitle: 'वॉटर प्युरिफायर फोटो',
     choosePhotoMethod: 'फोटो कसा जोडायचा ते निवडा',
     cancel: 'रद्द करा',
@@ -175,6 +2508,8 @@ const translations = {
     removePhoto: 'फोटो काढा',
     language: 'मराठी',
     marathi: 'मराठी',
+    fetchingLocation: 'स्थान मिळवत आहे...',
+    locationFetchError: 'स्थान मिळवताना त्रुटी',
   },
   english: {
     editCustomer: 'Edit Customer',
@@ -195,6 +2530,10 @@ const translations = {
     phonePlaceholder: '+91 1234567890',
     address: 'Address',
     enterAddress: 'Enter address',
+    getCurrentLocation: 'Get Current Location',
+    spareParts: 'Spare Parts',
+    enterSpareParts: 'Enter spare parts',
+    addSpareParts: 'Add Spare Parts',
     smsReminderSettings: 'Reminder Settings',
     smsReminderDescription: 'Schedule automatic reminders via WhatsApp and phone notification',
     date: 'Date',
@@ -231,7 +2570,7 @@ const translations = {
     updateError: 'Error updating customer',
     saveError: 'Error saving customer',
     defaultSMSTemplate: (name: string, phone: string) => 
-      `Hello ${name}, it’s time for this customer’s service. Please check the customer details.`,
+      `Hello ${name}, this is a reminder that your equipment servicing is due. Please contact us at 8446682152.`,
     smsNotAvailable: 'SMS Not Available',
     smsNotAvailableMessage: 'SMS is not available on your device',
     smsError: 'SMS Error',
@@ -240,6 +2579,7 @@ const translations = {
     cameraPermissionMessage: 'Please grant camera permission',
     galleryPermissionMessage: 'Please grant gallery permission',
     notificationPermissionMessage: 'Notification permission is required',
+    locationPermissionMessage: 'Location permission is required',
     waterPurifierPhotoTitle: 'Water Purifier Photo',
     choosePhotoMethod: 'Choose how to add photo',
     cancel: 'Cancel',
@@ -248,6 +2588,8 @@ const translations = {
     removePhoto: 'Remove Photo',
     language: 'English',
     marathi: 'Marathi',
+    fetchingLocation: 'Fetching location...',
+    locationFetchError: 'Error fetching location',
   },
 };
 
@@ -336,13 +2678,13 @@ const registerForPushNotificationsAsync = async () => {
   
   return token;
 };
-// ============ REGISTER BACKGROUND FETCH ============
+
 const registerBackgroundFetchAsync = async () => {
   try {
     await BackgroundFetch.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK, {
-      minimumInterval: 15 * 60, // 15 minutes minimum on iOS
-      stopOnTerminate: false, // Keep running even when app is closed
-      startOnBoot: true, // Start when device reboots
+      minimumInterval: 15 * 60,
+      stopOnTerminate: false,
+      startOnBoot: true,
     });
     console.log("✅ Background fetch registered successfully");
   } catch (error) {
@@ -396,12 +2738,14 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
   const [name, setName] = useState<string>("");
   const [phone, setPhone] = useState<string>("");
   const [address, setAddress] = useState<string>("");
+  const [spareParts, setSpareParts] = useState<string>("");
   const [photo, setPhoto] = useState<string | undefined>(undefined);
   const [notifyDate, setNotifyDate] = useState<Date | null>(null);
   const [messageType, setMessageType] = useState<MessageType>('default');
   const [customMessage, setCustomMessage] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
   const [processingPhoto, setProcessingPhoto] = useState<boolean>(false);
+  const [fetchingLocation, setFetchingLocation] = useState<boolean>(false);
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
 
@@ -417,6 +2761,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
       setName(customerToEdit.name || "");
       setPhone(customerToEdit.phone || "");
       setAddress(customerToEdit.address || "");
+      setSpareParts(customerToEdit.spareParts || "");
       setPhoto(customerToEdit.photoBase64 || customerToEdit.photoURL || customerToEdit.photo);
       
       const savedMessageType = customerToEdit.messageType;
@@ -444,6 +2789,51 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
       await registerBackgroundFetchAsync();
     })();
   }, []);
+
+  const getCurrentLocation = async () => {
+    setFetchingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t.permissionRequired, t.locationPermissionMessage);
+        setFetchingLocation(false);
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+
+      try {
+        const addresses = await Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
+
+        if (addresses && addresses.length > 0) {
+          const addr = addresses[0];
+          const formattedAddress = [
+            addr.street,
+            addr.city,
+            addr.region,
+            addr.postalCode,
+            addr.country,
+          ]
+            .filter(Boolean)
+            .join(', ');
+          setAddress(formattedAddress);
+        } else {
+          setAddress(`${latitude}, ${longitude}`);
+        }
+      } catch (error) {
+        setAddress(`${latitude}, ${longitude}`);
+      }
+    } catch (error) {
+      console.error('❌ Location error:', error);
+      Alert.alert(t.error, t.locationFetchError);
+    } finally {
+      setFetchingLocation(false);
+    }
+  };
 
   const convertToBase64 = async (uri: string): Promise<string> => {
     try {
@@ -548,7 +2938,6 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
       ? customMessage.trim() 
       : getDefaultMessage();
 
-    // Test with immediate notification
     await Notifications.scheduleNotificationAsync({
       content: {
         title: isMarathi ? "🧪 परीक्षण स्मरणपत्र" : "🧪 Test Reminder",
@@ -616,6 +3005,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
         name: name.trim(),
         phone: phone.trim(),
         address: address.trim(),
+        spareParts: spareParts.trim(),
         photoBase64: photo || null,
         notifyDate: notifyDate ? notifyDate.toISOString() : null,
         messageType: messageType,
@@ -638,12 +3028,10 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
       }
 
       if (notifyDate) {
-        // 1. Schedule LOCAL NOTIFICATION (for your phone)
         const hasPermission = await requestNotificationPermissions();
         if (hasPermission) {
-          const notificationId = await scheduleLocalNotification(notifyDate, messageToSave);
+              const notificationId = await scheduleLocalNotification(notifyDate, messageToSave);
           
-          // Store in AsyncStorage for background task
           await storeReminder(
             customerId,
             name.trim(),
@@ -657,8 +3045,6 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
           console.log("✅ Local notification scheduled and stored");
         }
 
-        // 2. Store WHATSAPP REMINDER in Firestore (for customer)
-        // Remove old reminder if editing
         if (isEditing && customerToEdit?.id) {
           const remindersQuery = query(
             collection(db, 'reminders'),
@@ -670,7 +3056,6 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
           }
         }
         
-        // Store new WhatsApp reminder
         await addDoc(collection(db, "reminders"), {
           customerId: customerId,
           customerName: name.trim(),
@@ -684,12 +3069,7 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
         });
         
         console.log("✅ WhatsApp reminder stored in Firestore");
-        console.log("   Customer:", name.trim());
-        console.log("   Phone:", phone.trim());
-        console.log("   Scheduled:", notifyDate.toISOString());
-        console.log("📱 BOTH reminders set: Local notification + WhatsApp message");
       } else {
-        // Remove both reminders if date is cleared
         await removeReminder(customerId);
         
         if (isEditing && customerToEdit?.id) {
@@ -716,139 +3096,11 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
     } catch (err: any) {
       console.error("❌ handleSave error:", err);
       const errorMessage = err.message || (isEditing ? t.updateError : t.saveError);
-      Alert.alert(t.error, errorMessage); 
+      Alert.alert(t.error, errorMessage);
     } finally {
       setSaving(false);
     }
   };
-
-  
-// const handleSave = async () => {
-//   if (!validateForm()) {
-//     return;
-//   }
-
-//   setSaving(true);
-//   try {
-//     const messageToSave = messageType === 'custom' ? customMessage.trim() : getDefaultMessage();
-
-//     const customerData = {
-//       name: name.trim(),
-//       phone: phone.trim(),
-//       address: address.trim(),
-//       photoBase64: photo || null,
-//       notifyDate: notifyDate ? notifyDate.toISOString() : null,
-//       messageType: messageType,
-//       customMessage: messageToSave,
-//       updatedAt: serverTimestamp(),
-//       ...(isEditing ? {} : { createdAt: serverTimestamp() })
-//     };
-
-//     let customerId: string;
-
-//     if (isEditing && customerToEdit?.id) {
-//       const customerRef = doc(db, "customers", customerToEdit.id);
-//       await updateDoc(customerRef, customerData);
-//       customerId = customerToEdit.id;
-//       console.log("✅ Updated customer id:", customerId);
-//     } else {
-//       const docRef = await addDoc(collection(db, "customers"), customerData);
-//       customerId = docRef.id;
-//       console.log("✅ Created new customer id:", customerId);
-//     }
-
-//     if (notifyDate) {
-//       // Get Expo Push Token for server-side notifications
-//       const expoPushToken = await registerForPushNotificationsAsync();
-      
-//       // 1. Schedule LOCAL NOTIFICATION (works only when app is in background)
-//       const hasPermission = await requestNotificationPermissions();
-//       if (hasPermission) {
-//         const notificationId = await scheduleLocalNotification(notifyDate, messageToSave);
-        
-//         // Store in AsyncStorage for background task
-//         await storeReminder(
-//           customerId,
-//           name.trim(),
-//           phone.trim(),
-//           notifyDate,
-//           messageType,
-//           messageToSave,
-//           notificationId
-//         );
-        
-//         console.log("✅ Local notification scheduled and stored");
-//       }
-
-//       // 2. Store REMINDER in Firestore (for BOTH WhatsApp AND Push Notifications)
-//       // Remove old reminder if editing
-//       if (isEditing && customerToEdit?.id) {
-//         const remindersQuery = query(
-//           collection(db, 'reminders'),
-//           where('customerId', '==', customerToEdit.id)
-//         );
-//         const oldReminders = await getDocs(remindersQuery);
-//         for (const oldReminder of oldReminders.docs) {
-//           await deleteDoc(oldReminder.ref);
-//         }
-//       }
-      
-//       // Store new reminder with push token
-//       await addDoc(collection(db, "reminders"), {
-//         customerId: customerId,
-//         customerName: name.trim(),
-//         phone: phone.trim(),
-//         message: messageToSave,
-//         scheduledTime: Timestamp.fromDate(notifyDate),
-//         expoPushToken: expoPushToken, // 🔥 This enables server-side push notifications
-//         sent: false,
-//         createdAt: serverTimestamp(),
-//         messageType: messageType,
-//         errorCount: 0
-//       });
-      
-//       console.log("✅ Reminder stored in Firestore with push token");
-//       console.log("   Customer:", name.trim());
-//       console.log("   Phone:", phone.trim());
-//       console.log("   Push Token:", expoPushToken ? "✅ Enabled" : "❌ Not available");
-//       console.log("   Scheduled:", notifyDate.toISOString());
-//       console.log("📱 TRIPLE reminder system:");
-//       console.log("   1. Local notification (app in background)");
-//       console.log("   2. Push notification (app closed) ← THIS WORKS WHEN CLOSED!");
-//       console.log("   3. WhatsApp message (to customer)");
-//     } else {
-//       // Remove reminders if date is cleared
-//       await removeReminder(customerId);
-      
-//       if (isEditing && customerToEdit?.id) {
-//         const remindersQuery = query(
-//           collection(db, 'reminders'),
-//           where('customerId', '==', customerToEdit.id)
-//         );
-//         const oldReminders = await getDocs(remindersQuery);
-//         for (const oldReminder of oldReminders.docs) {
-//           await deleteDoc(oldReminder.ref);
-//         }
-//       }
-//     }
-
-//     const successMessage = notifyDate
-//       ? (isEditing 
-//           ? `${t.customerUpdatedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना (बंद असतानाही)' : 'Push notification (even when closed)'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`
-//           : `${t.customerAddedSuccess} ${notifyDate.toLocaleDateString()} ${t.at} ${notifyDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}\n\n✅ ${isMarathi ? 'आपल्या फोनवर सूचना (बंद असतानाही)' : 'Push notification (even when closed)'}\n✅ ${isMarathi ? 'ग्राहकाला WhatsApp संदेश' : 'WhatsApp message to customer'}`)
-//       : (isEditing ? t.customerUpdatedSimple : t.customerAddedSimple);
-
-//     Alert.alert(t.success, successMessage, [
-//       { text: "OK", onPress: () => navigation.goBack() }
-//     ]);
-//   } catch (err: any) {
-//     console.error("❌ handleSave error:", err);
-//     const errorMessage = err.message || (isEditing ? t.updateError : t.saveError);
-//     Alert.alert(t.error, errorMessage);
-//   } finally {
-//     setSaving(false);
-//   }
-// };
 
   return (
     <KeyboardAvoidingView
@@ -967,14 +3219,46 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>
-                {t.address} <Text style={styles.required}>*</Text>
-              </Text>
+              <View style={styles.addressLabelRow}>
+                <Text style={styles.inputLabel}>
+                  {t.address} <Text style={styles.required}>*</Text>
+                </Text>
+                <TouchableOpacity
+                  style={styles.locationButton}
+                  onPress={getCurrentLocation}
+                  disabled={fetchingLocation}
+                >
+                  {fetchingLocation ? (
+                    <ActivityIndicator color="#007bff" size="small" />
+                  ) : (
+                    <>
+                      <Text style={styles.locationButtonIcon}>📍</Text>
+                      <Text style={styles.locationButtonText}>{t.getCurrentLocation}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
               <TextInput
                 placeholder={t.enterAddress}
                 style={[styles.input, styles.textArea]}
                 value={address}
                 onChangeText={setAddress}
+                multiline={true}
+                numberOfLines={3}
+                placeholderTextColor="#999"
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>
+                {t.spareParts} <Text style={styles.optional}>({t.optional})</Text>
+              </Text>
+              <TextInput
+                placeholder={t.enterSpareParts}
+                style={[styles.input, styles.textArea]}
+                value={spareParts}
+                onChangeText={setSpareParts}
                 multiline={true}
                 numberOfLines={3}
                 placeholderTextColor="#999"
@@ -1183,13 +3467,41 @@ export default function AddCustomerScreen({ navigation, route }: Props) {
     </KeyboardAvoidingView>
   );
 }
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
+  addressLabelRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 8,
+},
+optional: {
+  fontSize: 12,
+  color: "#6c757d",
+  fontWeight: "400",
+},
+locationButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: '#e3f2fd',
+  borderWidth: 1,
+  borderColor: '#007bff',
+  borderRadius: 6,
+  paddingHorizontal: 10,
+  paddingVertical: 6,
+  gap: 4,
+},
+locationButtonIcon: {
+  fontSize: 14,
+},
+locationButtonText: {
+  fontSize: 12,
+  fontWeight: '600',
+  color: '#007bff',
+},
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "center",

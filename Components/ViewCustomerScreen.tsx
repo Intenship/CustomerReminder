@@ -87,6 +87,9 @@ const translations = {
     language: "English",
     loading: "Loading...",
     customerNotFound: "Customer not found",
+    // Add to english object
+spareParts: 'Spare Parts',
+sparePartsDetails: 'Spare Parts Details',
   },
   mr: {
     customerDetails: "ग्राहक तपशील",
@@ -142,6 +145,8 @@ const translations = {
     language: "मराठी",
     loading: "लोड करत आहे...",
     customerNotFound: "ग्राहक सापडला नाही",
+    spareParts: 'स्पेयर पार्ट्स',
+sparePartsDetails: 'स्पेयर पार्ट्स विवरण',
   },
 };
 
@@ -639,6 +644,27 @@ ${
           </View>
         </View>
 
+        
+        {/* Spare Parts Section */}
+        {customer.spareParts && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t.spareParts}</Text>
+            <View style={styles.infoCard}>
+              <View style={styles.infoItem}>
+                <View style={styles.infoIcon}>
+                  <Text style={styles.icon}>🔧</Text>
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>{t.sparePartsDetails}</Text>
+                  <Text style={styles.infoValue}>
+                    {customer.spareParts || t.notProvided}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Reminder Information */}
         {(customer.notifyDate || customer.customMessage) && (
           <View style={styles.section}>
@@ -733,6 +759,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9fa",
   },
+  sparePartsSection: {
+  backgroundColor: "#fff3cd",
+  borderLeftWidth: 4,
+  borderLeftColor: "#ff9800",
+},
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

@@ -9,6 +9,7 @@ export interface Customer {
   phone: string;
   address: string;
   // local preview we used before (optional)
+  spareParts?: string;
   photo?: string;
   photoBase64?: string;
   // URL after upload to Firebase Storage

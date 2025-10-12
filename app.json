@@ -19,6 +19,18 @@
         "UIBackgroundModes": ["remote-notification"]
       }
     },
+    "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
